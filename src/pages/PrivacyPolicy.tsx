@@ -15,7 +15,7 @@ export default function PrivacyPolicy() {
         </Link>
 
         <h1 className="mt-4 text-2xl font-bold text-surface-900">Политика конфиденциальности TeamUp</h1>
-        <p className="mt-1 text-sm text-surface-400">Дата последнего обновления: 12.07.2026</p>
+        <p className="mt-1 text-sm text-surface-400">Дата последнего обновления: 14.07.2026</p>
 
         <div className="prose-sm mt-6 space-y-5 text-sm leading-relaxed text-surface-700">
           <section>
@@ -95,14 +95,15 @@ export default function PrivacyPolicy() {
                 </a>
               </li>
               <li>
-                <strong>Resend</strong> (отправка писем — подтверждение почты, уведомления о заявках) —{' '}
+                <strong>Google (Gmail)</strong> (отправка писем с уведомлениями о заявках и решениях по ним —
+                через обычный Gmail-аккаунт сервиса) —{' '}
                 <a
                   className="text-accent-600 hover:underline"
-                  href="https://resend.com/legal/privacy-policy"
+                  href="https://policies.google.com/privacy"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  resend.com/legal/privacy-policy
+                  policies.google.com/privacy
                 </a>
               </li>
             </ul>

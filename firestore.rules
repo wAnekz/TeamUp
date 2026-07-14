@@ -11,14 +11,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Firebase includes email_verified as a claim on the ID token itself
-    // (true automatically for Google sign-in, false for email/password until
-    // the user clicks the link) — so this needs no extra Firestore read.
-    // Gates create on projects/applications/lookingForTeam specifically
-    // because those are the three actions that trigger an email in
-    // functions/src/notifications.ts; an unverified address there would
-    // just bounce or reach nobody. Doesn't gate reading, chat, or profile
-    // editing — no reason to block those on this.
     function isEmailVerified() {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
@@ -29,13 +21,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileComplete == true;
     }
 
-    // A single allowlist doc lists moderator uids. There's no Admin SDK /
-    // custom-claims setup for this MVP, so this is the simplest thing that
-    // actually gates the reports queue: only uids listed here can read
-    // reports at all. Add/remove uids by hand in the console (or Admin SDK
-    // later) — this doc is never writable from the client (see config match
-    // block below), so a compromised or malicious client account can't add
-    // itself as a moderator.
     function isModerator() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/config/moderators)
@@ -43,57 +28,41 @@ service cloud.firestore {
     }
 
     match /config/{docId} {
-      // get() calls made from inside other rules (e.g. isModerator()) are
-      // not themselves subject to this rule, so restricting direct client
-      // reads here doesn't break isModerator() — it just stops any signed-in
-      // user from listing who the moderators are.
       allow read: if isModerator();
       allow write: if false; // console / Admin SDK only
     }
 
     // ---------------- users ----------------
     match /users/{userId} {
-      // Any signed-in user can view profiles (skills/interests/bio are meant
-      // to be discoverable); contacts are only rendered client-side after
-      // acceptance, this rule does not need to hide fields since we don't
-      // split contacts into a subcollection for this MVP.
-      //
-      // email is deliberately NOT stored on this document (see
-      // users/{userId}/private/{docId} below) — Firestore rules can't hide
-      // a single field from a whole-document read, so a document readable
-      // by "any signed-in user" can never safely contain it. This matters
-      // here specifically because the userbase is minors.
       allow read: if isSignedIn();
-
-      // A user may only create/update their own doc. The initial stub is
-      // created client-side right after signup, before profileComplete=true.
       allow create: if isOwner(userId);
       allow update: if (isOwner(userId)
-        // uid can never be changed after creation.
         && request.resource.data.uid == userId
-        // email can never live here — belongs in the private subcollection.
         && !('email' in request.resource.data))
-        // Moderators may flip `banned` from the reports queue (Reports.tsx)
-        // without needing Admin SDK / custom claims — same allowlist-doc
-        // pattern as everything else here. Restricted to exactly this one
-        // field so a moderator account can never rewrite someone's profile
-        // content, only gate their access to it (see guards.tsx).
         || (isModerator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['banned', 'updatedAt']));
       allow delete: if false;
     }
 
-    // Private per-user data (currently just email). Only the owner can read
-    // it client-side; Cloud Functions (functions/src/notifications.ts) read
-    // it too, but via the Admin SDK, which bypasses these rules entirely.
-    // Kept as a separate doc rather than a field on users/{userId} because
-    // that document's read rule is intentionally open to any signed-in
-    // user (profiles are discoverable) and Firestore rules have no way to
-    // hide one field from a whole-document read.
     match /users/{userId}/private/{docId} {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
       allow delete: if false;
+    }
+
+    // ---------------- blocks (self-serve mute, client-side only) ----------------
+    // users/{uid}/blocks/{blockedUid} — lets a user hide another user's chat
+    // messages from their own view without needing a moderator. This is
+    // NOT a substitute for reporting: it only filters what the blocker sees
+    // client-side (see useBlockedUsers.ts / TeamChat.tsx) — the blocked
+    // user can still technically write to a shared chat they're a member
+    // of, this doc just tells every client of the blocker's to hide them.
+    // Only the owner can ever read or write their own block list.
+    match /users/{userId}/blocks/{blockedUid} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && blockedUid != userId;
+      allow update: if false;
+      allow delete: if isOwner(userId);
     }
 
     // ---------------- projects ----------------
@@ -105,21 +74,7 @@ service cloud.firestore {
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.status in ['open', 'closed', 'archived'];
 
-      // Only the project owner can edit. Role slot counts are also mutated
-      // by useReviewApplication() via a transaction — that write still goes
-      // through this same rule since it's still the owner's document, but
-      // slot increments themselves are only ever legitimate when driven by
-      // an accepted application, which the client enforces transactionally.
-      //
-      // Exception: any signed-in viewer may bump viewCount — that's the only
-      // field a non-owner write is allowed to touch, and it must move by
-      // exactly +1 and leave every other field untouched.
       allow update: if isOwner(resource.data.authorId) || isViewCountIncrement();
-      // Moderators can delete a reported project straight from the queue
-      // (Reports.tsx) — previously this required the Firebase Console,
-      // which is slow enough that harmful content could sit live for a
-      // while after being reported. Same allowlist-doc check as everything
-      // else moderator-gated in this file.
       allow delete: if isOwner(resource.data.authorId) || isModerator();
 
       function isViewCountIncrement() {
@@ -128,14 +83,6 @@ service cloud.firestore {
           && request.resource.data.viewCount == resource.data.viewCount + 1;
       }
 
-      // ---------------- team chat ----------------
-      // Subcollection instead of a top-level `messages` collection so access
-      // control can piggyback on a single get() of the parent project doc,
-      // rather than needing a denormalized ownerId/members copy on every
-      // message. Membership = project author, or an accepted applicant
-      // (tracked in projects.members, kept in sync by useReviewApplication's
-      // accept transaction — security rules can't run the `applications`
-      // query that would otherwise be needed to check this).
       match /messages/{messageId} {
         function project() {
           return get(/databases/$(database)/documents/projects/$(projectId)).data;
@@ -153,8 +100,6 @@ service cloud.firestore {
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 1000;
-        // Messages are immutable once sent — no edit/delete, keeps the
-        // history trustworthy for everyone in the thread.
         allow update: if false;
         allow delete: if false;
       }
@@ -162,14 +107,6 @@ service cloud.firestore {
 
     // ---------------- applications ----------------
     match /applications/{applicationId} {
-      // Applicant and project owner can both read their relevant applications.
-      // `resource == null` covers the case where the document doesn't exist
-      // yet: useApplyToRole's transaction does a tx.get(ref) on the
-      // deterministic id purely to check "does this application already
-      // exist" before tx.set()-ing it. Without this clause, resource.data on
-      // a nonexistent doc throws inside the rule and the whole read (and so
-      // the transaction) gets rejected with permission-denied, even for a
-      // brand new, never-before-seen application id.
       allow read: if isSignedIn()
         && (resource == null
             || resource.data.applicantId == request.auth.uid
@@ -179,20 +116,9 @@ service cloud.firestore {
         && isEmailVerified()
         && request.resource.data.applicantId == request.auth.uid
         && request.resource.data.status == 'pending'
-        // Can't apply to your own project.
         && request.resource.data.ownerId != request.auth.uid
-        // Duplicate-application prevention, server-side and race-free: the
-        // client (useApplyToRole) now writes to the deterministic id
-        // `${projectId}_${roleId}_${applicantId}` instead of addDoc(). A
-        // second attempt at the same id is an "update" as far as Firestore
-        // is concerned, not a "create" — and the update rule below only
-        // permits the project owner to transition status, so a duplicate
-        // application is rejected outright regardless of timing.
         && applicationId == request.resource.data.projectId + '_' + request.resource.data.roleId + '_' + request.resource.data.applicantId;
 
-      // Only the project owner can transition status (accept/reject).
-      // The applicant may still read but never edit their own application
-      // after submission, keeping status changes single-sourced from the owner.
       allow update: if isSignedIn()
         && resource.data.ownerId == request.auth.uid
         && request.resource.data.applicantId == resource.data.applicantId
@@ -212,8 +138,6 @@ service cloud.firestore {
 
     // ---------------- savedProjects (favorites) ----------------
     match /savedProjects/{savedId} {
-      // Doc id is always `${uid}_${projectId}` and uid must match the field,
-      // so a user can only ever read/write their own saved-projects docs.
       allow read: if isOwner(resource.data.uid);
       allow create: if isOwner(request.resource.data.uid)
         && savedId == request.resource.data.uid + '_' + request.resource.data.projectId;
@@ -223,10 +147,6 @@ service cloud.firestore {
 
     // ---------------- feedback (bug reports to the developer) ----------------
     match /feedback/{feedbackId} {
-      // Write-only from the client, same pattern as reports originally were:
-      // there's no in-app queue for this (it emails the developer directly,
-      // see functions/src/feedback.ts), so no client, including the author,
-      // needs to read it back.
       allow read: if false;
       allow create: if isSignedIn()
         && request.resource.data.reporterId == request.auth.uid
@@ -239,10 +159,6 @@ service cloud.firestore {
 
     // ---------------- reports ----------------
     match /reports/{reportId} {
-      // Reports are write-only for regular users. Anyone listed in
-      // config/moderators can read the queue and flip status to 'reviewed'
-      // (see src/pages/moderation/Reports.tsx) — no Admin SDK needed for
-      // the MVP moderation flow, just the allowlist doc.
       allow read: if isModerator();
       allow create: if isSignedIn()
         && request.resource.data.reporterId == request.auth.uid

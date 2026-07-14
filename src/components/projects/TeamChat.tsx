@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Timestamp } from 'firebase/firestore';
-import { Send } from 'lucide-react';
+import { Send, UserX, UserCheck } from 'lucide-react';
 import { Avatar, Skeleton } from '@/components/ui/primitives';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProjectChat, sendProjectMessage } from '@/hooks/useChat';
+import { blockUser, unblockUser, useBlockedUserIds } from '@/hooks/useBlockedUsers';
 import { cn } from '@/utils/cn';
 
 const MAX_LENGTH = 1000;
@@ -15,11 +16,30 @@ function messageTime(ts: Timestamp | undefined) {
 
 export function TeamChat({ projectId, enabled }: { projectId: string; enabled: boolean }) {
   const { user, profile } = useAuth();
-  const { messages, loading, error } = useProjectChat(projectId, enabled);
+  const { messages: allMessages, loading, error } = useProjectChat(projectId, enabled);
+  const blockedIds = useBlockedUserIds();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const hiddenCount = allMessages.filter((m) => blockedIds.has(m.authorId)).length;
+  const messages = showBlocked ? allMessages : allMessages.filter((m) => !blockedIds.has(m.authorId));
+
+  const toggleBlock = (authorId: string, authorName: string) => {
+    if (!user) return;
+    if (blockedIds.has(authorId)) {
+      unblockUser(user.uid, authorId);
+      return;
+    }
+    // Confirm before blocking, same pattern as the moderator "ban" action
+    // in Reports.tsx — this hides them everywhere you'd see their
+    // messages, so worth a beat before committing to it.
+    if (confirm(`Hide messages from ${authorName}? You can undo this any time — they won't be notified.`)) {
+      blockUser(user.uid, authorId);
+    }
+  };
   // Cheap client-side throttle: blocks accidental double-sends and casual
   // flooding through the UI. Not a substitute for real server-side rate
   // limiting (see the Cloud Function in functions/src/moderation.ts) — a
@@ -79,18 +99,31 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
               <Skeleton className="ml-auto h-10 w-2/3" />
             </div>
           )}
-          {!loading && !error && messages.length === 0 && (
+          {!loading && !error && messages.length === 0 && hiddenCount === 0 && (
             <p className="text-center text-sm text-surface-400">No messages yet — say hi to your team.</p>
+          )}
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowBlocked((v) => !v)}
+              className="w-full rounded-xl border border-dashed border-surface-200 py-1.5 text-center text-xs text-surface-400 hover:text-surface-600"
+            >
+              {showBlocked
+                ? 'Hide messages from blocked users again'
+                : `${hiddenCount} message${hiddenCount === 1 ? '' : 's'} hidden from users you blocked — show`}
+            </button>
           )}
           {messages.map((m) => {
             const mine = m.authorId === user?.uid;
+            const isBlocked = blockedIds.has(m.authorId);
             return (
-              <div key={m.id} className={cn('flex items-end gap-2', mine && 'flex-row-reverse')}>
+              <div key={m.id} className={cn('group flex items-end gap-2', mine && 'flex-row-reverse')}>
                 <Avatar src={m.authorAvatarUrl} name={m.authorName} size={28} />
                 <div
                   className={cn(
                     'max-w-[75%] rounded-2xl px-3.5 py-2 text-sm',
                     mine ? 'bg-accent-600 text-white' : 'bg-surface-100 text-surface-800',
+                    !mine && isBlocked && 'opacity-50',
                   )}
                 >
                   {!mine && <p className="mb-0.5 text-xs font-medium text-surface-500">{m.authorName}</p>}
@@ -99,6 +132,17 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
                     {messageTime(m.createdAt)}
                   </p>
                 </div>
+                {!mine && (
+                  <button
+                    type="button"
+                    onClick={() => toggleBlock(m.authorId, m.authorName)}
+                    aria-label={isBlocked ? `Unblock ${m.authorName}` : `Block ${m.authorName}`}
+                    title={isBlocked ? `Unblock ${m.authorName}` : `Hide messages from ${m.authorName}`}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-surface-300 opacity-0 transition hover:bg-surface-100 hover:text-surface-600 group-hover:opacity-100"
+                  >
+                    {isBlocked ? <UserCheck size={14} /> : <UserX size={14} />}
+                  </button>
+                )}
               </div>
             );
           })}
