@@ -1,7 +1,5 @@
 # TeamUp
 
-[![CI](https://github.com/wAnekz/TeamUp/actions/workflows/ci.yml/badge.svg)](https://github.com/wAnekz/TeamUp/actions/workflows/ci.yml)
-
 A PWA where high school students (14–18) find teammates or join teams for hackathons, olympiads, research and pet projects.
 
 React + TypeScript + Vite + Tailwind + Firebase (Auth, Firestore) + ImgBB (avatar uploads) + TanStack Query + React Hook Form + Zod.
