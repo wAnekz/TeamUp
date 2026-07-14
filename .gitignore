@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+functions/node_modules/
+
+# build output
+dist/
+functions/lib/
+
+# env / secrets
+.env
+.env.*
+functions/.env
+functions/.env.*
+
+# firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# editor / os
+.DS_Store
+.vscode/
+*.local
+
+# logs
+npm-debug.log*
