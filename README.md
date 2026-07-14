@@ -1,5 +1,7 @@
 # TeamUp
 
+[![CI](https://github.com/wAnekz/TeamUp/actions/workflows/ci.yml/badge.svg)](https://github.com/wAnekz/TeamUp/actions/workflows/ci.yml)
+
 A PWA where high school students (14–18) find teammates or join teams for hackathons, olympiads, research and pet projects.
 
 React + TypeScript + Vite + Tailwind + Firebase (Auth, Firestore) + ImgBB (avatar uploads) + TanStack Query + React Hook Form + Zod.
@@ -16,14 +18,21 @@ You'll need a Firebase project with **Authentication** (Email/Password + Google 
 
 Avatar uploads go through [ImgBB](https://api.imgbb.com/) instead of Firebase Storage, since Firebase now requires the paid Blaze billing plan just to provision a Storage bucket. Get a free API key at https://api.imgbb.com/ and set `VITE_IMGBB_API_KEY` in `.env`. (If you'd rather use Firebase Storage, the old implementation is straightforward to restore — see the comment in `src/lib/firebase.ts`.)
 
-Deploy security rules and indexes:
+Deploy security rules, indexes, and Cloud Functions:
 
 ```bash
 npm install -g firebase-tools   # if you don't have it
 firebase login
 firebase use --add              # link this folder to your Firebase project
 firebase deploy --only firestore:rules,firestore:indexes
+cd functions && npm install && npm run deploy && cd ..   # requires Blaze plan
 ```
+
+The functions are safe to deploy unconfigured — email (`GMAIL_APP_PASSWORD`)
+and content screening (`GROQ_API_KEY`) just log a warning and skip until
+their secrets are set (see "Email notifications" and "Automated content
+screening" below); rate-limiting and auto-archive need no extra setup at
+all.
 
 Seed sample data (points at whatever project `.env` is configured for — **use a dev project, not production**):
 
@@ -89,16 +98,55 @@ any client user.
 
 ## What's stubbed / next steps
 
-This is a real, running MVP — not a mockup — but a few things from the brief
-are intentionally left as follow-ups rather than fully wired, so you can
-prioritize:
+This is a real, running MVP — not a mockup — but a couple of things from the
+brief are intentionally left as follow-ups rather than fully wired, so you
+can prioritize:
 
-- **Auto-archive** (deadline expired, or 60 days inactive) — needs a
-  scheduled Cloud Function (`functions.pubsub.schedule`) that flips
-  `status: 'archived'`. Straightforward to add once you're on the Blaze plan.
 - **Push notifications** — brief marks this "later."
+- **Account self-deletion** — right now deleting an account is a manual
+  request to the developer (see `PrivacyPolicy.tsx` §7), not a button in
+  the app.
 
-## Email notifications
+## Auto-archive
+
+`functions/src/autoArchive.ts` runs once a day (`onSchedule('every 24 hours')`)
+and flips `status: 'archived'` on any project that's:
+
+- an `event`-type project whose `deadline` has passed, or
+- any non-draft project (event or ongoing) that hasn't been updated in
+  60 days, regardless of deadline — covers ongoing/pet projects, which
+  don't have a deadline to key off of.
+
+Drafts are never touched. Writes are batched (400 per batch, under
+Firestore's 500-write cap) so a single run can archive a few hundred
+projects at once without extra round trips. Deploy it like any other
+function: `cd functions && npm install && npm run deploy` — no secrets
+needed, it only needs Firestore access via the Admin SDK. The two composite
+indexes it depends on (`type/status/isDraft/deadline` and
+`status/isDraft/updatedAt` on `projects`) are already in
+`firestore.indexes.json`; deploy those before the function actually gets
+traffic (`firebase deploy --only firestore:indexes`), and give them a
+minute or two to finish building in the Firebase console before relying on
+the schedule.
+
+To test without waiting a day, trigger it manually from the Firebase
+console (Functions → `autoArchiveProjects` → "Run now") or
+`firebase functions:shell`.
+
+## Blocking / muting
+
+`useBlockedUsers.ts` + `users/{uid}/blocks/{blockedUid}` let a user hide
+someone's messages in team chat (`TeamChat.tsx` — hover a message, click the
+user icon) without needing a moderator. This is deliberately lightweight and
+**client-side only**: it filters what renders for the blocker, it doesn't
+stop the blocked person from writing to a chat they're still a member of,
+and it doesn't notify anyone. Anything that needs the person actually
+removed or sanctioned still goes through `ReportButton` → the moderation
+queue described below. Firestore rules restrict a block list to its owner
+(read and write), same allowlist-per-user pattern as everything else
+permission-gated in this file.
+
+
 
 `functions/src/notifications.ts` emails people at the two moments that
 actually need a nudge outside the app: a new application (→ the project
