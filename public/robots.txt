@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /privacy
+Disallow: /dashboard
+Disallow: /moderation
+Disallow: /projects/
+Disallow: /users/
+Disallow: /complete-profile
+Disallow: /looking-for-team
+Disallow: /feed
+
+Sitemap: https://team-up-web.netlify.app/sitemap.xml
