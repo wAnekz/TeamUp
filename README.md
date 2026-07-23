@@ -14,6 +14,7 @@ A PWA that helps high school students (14–18) in Almaty find teammates for hac
 - Report queue with a moderator role, plus automated first-pass content screening (Groq) on public posts
 - Rate limiting on messages, reports, and applications via Cloud Functions
 - Email notifications on new applications and accept/reject decisions
+- Push notifications (FCM) on the same events, opt-in from Settings
 - Auto-archive for stale or past-deadline projects
 - Installable PWA, offline-friendly caching
 
@@ -97,7 +98,15 @@ The userbase is 14–18, so this got more attention than a typical side project:
 ## Known gaps
 
 - No self-serve account deletion yet (manual request to the developer — see `PrivacyPolicy.tsx` §7)
-- No push notifications (email only)
+
+## Push notifications setup
+
+Push (`functions/src/notifications.ts` → `sendPush`, `src/lib/messaging.ts`) reuses the same Firebase project as everything else, but needs two things filled in that aren't provided by `npm install`:
+
+1. **VAPID key** — Firebase console → Project settings → Cloud Messaging → Web configuration → "Generate key pair". Put it in `.env` as `VITE_FIREBASE_VAPID_KEY`. Without it, the "Enable" button in Settings silently does nothing (checked in `useNotifications`/`requestPushPermission`).
+2. **`public/firebase-messaging-sw.js`** hardcodes the same `firebaseConfig` values as `.env`, because it's a static file (not built by Vite, can't read `import.meta.env`) that has to run inside the service worker. If the Firebase project ever changes, update both places.
+
+No Cloud Functions config changes needed — `sendPush` reads device tokens straight from `users/{uid}/private/notifications.tokens`, written client-side when someone taps "Enable".
 
 ## License
 

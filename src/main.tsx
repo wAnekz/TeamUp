@@ -7,8 +7,15 @@ import { queryClient } from '@/lib/queryClient';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastViewport } from '@/components/ui/ToastViewport';
+import { onForegroundPush } from '@/lib/messaging';
+import { toast } from '@/lib/toast';
 import App from './App';
 import './index.css';
+
+// Foreground pushes (app tab already open/focused) don't trigger a system
+// notification on their own — only background ones do, via
+// firebase-messaging-sw.js. Surface those as an in-app toast instead.
+onForegroundPush((title, body) => toast.info(body ? `${title}: ${body}` : title));
 
 // Without this, a new deploy's SW installs and (thanks to skipWaiting +
 // clientsClaim in vite.config) takes control of the page in the background —

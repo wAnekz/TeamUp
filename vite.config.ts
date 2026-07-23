@@ -36,6 +36,10 @@ export default defineConfig({
         // Cache built static assets (JS/CSS/images/fonts). Firestore/Auth calls are
         // never cached here — the app is offline-tolerant for the shell only.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Pulls the FCM background-message handler into this same service
+        // worker (see public/firebase-messaging-sw.js) instead of registering
+        // a second SW — only one SW can control "/" at a time.
+        importScripts: ['firebase-messaging-sw.js'],
         // Without these, a new SW sits in "waiting" until every open tab is
         // fully closed (not just backgrounded) — on mobile/PWA that can mean
         // days of the old JS bundle still being served from precache, which

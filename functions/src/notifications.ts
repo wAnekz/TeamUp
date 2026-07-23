@@ -1,6 +1,7 @@
 // Note: firebase-admin's initializeApp() is called once in moderation.ts,
 // which index.ts imports before this file — no need to call it again here.
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { defineSecret, defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
@@ -68,6 +69,48 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
   }
 }
 
+/**
+ * Push notifications (FCM), alongside the email ones above. Reads device
+ * tokens from users/{uid}/private/notifications.tokens — written client-side
+ * by src/lib/messaging.ts when someone taps "Enable" in Settings. A user
+ * with no tokens on file (never enabled push, or on a browser that doesn't
+ * support it) just gets skipped here — email still goes out either way.
+ */
+export async function sendPush(uid: string, opts: { title: string; body: string; url: string }) {
+  try {
+    const snap = await getFirestore().doc(`users/${uid}/private/notifications`).get();
+    const tokens: string[] = snap.data()?.tokens ?? [];
+    if (tokens.length === 0) return;
+
+    const response = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: { title: opts.title, body: opts.body },
+      data: { url: opts.url },
+      webpush: { fcmOptions: { link: opts.url } },
+    });
+
+    // Prune tokens FCM reports as no longer valid (uninstalled/expired/revoked)
+    // so this list doesn't grow forever with dead entries.
+    const staleTokens = response.responses
+      .map((r, i) => (!r.success && isUnregisteredError(r.error?.code) ? tokens[i] : null))
+      .filter((t): t is string => t !== null);
+    if (staleTokens.length > 0) {
+      await getFirestore()
+        .doc(`users/${uid}/private/notifications`)
+        .update({ tokens: FieldValue.arrayRemove(...staleTokens) });
+    }
+  } catch (err) {
+    // Never throw from a notification failure — same reasoning as sendEmail:
+    // a push-send hiccup should not roll back the Firestore write that
+    // triggered it.
+    logger.error('Push send failed', { error: err instanceof Error ? err.message : String(err), uid });
+  }
+}
+
+function isUnregisteredError(code: string | undefined) {
+  return code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token';
+}
+
 export function emailShell(bodyHtml: string) {
   return `
     <div style="font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #18181B;">
@@ -92,29 +135,34 @@ export const notifyNewApplication = onDocumentCreated(
 
     const ownerSnap = await getFirestore().doc(`users/${application.ownerId}/private/info`).get();
     const ownerEmail = ownerSnap.data()?.email;
-    if (!ownerEmail) {
-      logger.warn('Project owner has no email on file, skipping notification', { ownerId: application.ownerId });
-      return;
+    if (ownerEmail) {
+      await sendEmail({
+        to: ownerEmail,
+        subject: `New application: ${application.applicantName} → ${application.roleTitle}`,
+        html: emailShell(`
+          <p style="font-size: 15px; line-height: 1.5;">
+            <strong>${escapeHtml(application.applicantName)}</strong> applied for
+            <strong>${escapeHtml(application.roleTitle)}</strong> on your project
+            "<strong>${escapeHtml(application.projectTitle)}</strong>".
+          </p>
+          <p style="font-size: 15px; line-height: 1.5; background: #F4F4F5; border-radius: 12px; padding: 12px 16px;">
+            "${escapeHtml(application.message)}"
+          </p>
+          <p style="margin-top: 20px;">
+            <a href="${APP_URL.value()}/dashboard?tab=projects" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
+              Review application
+            </a>
+          </p>
+        `),
+      });
+    } else {
+      logger.warn('Project owner has no email on file, skipping email notification', { ownerId: application.ownerId });
     }
 
-    await sendEmail({
-      to: ownerEmail,
-      subject: `New application: ${application.applicantName} → ${application.roleTitle}`,
-      html: emailShell(`
-        <p style="font-size: 15px; line-height: 1.5;">
-          <strong>${escapeHtml(application.applicantName)}</strong> applied for
-          <strong>${escapeHtml(application.roleTitle)}</strong> on your project
-          "<strong>${escapeHtml(application.projectTitle)}</strong>".
-        </p>
-        <p style="font-size: 15px; line-height: 1.5; background: #F4F4F5; border-radius: 12px; padding: 12px 16px;">
-          "${escapeHtml(application.message)}"
-        </p>
-        <p style="margin-top: 20px;">
-          <a href="${APP_URL.value()}/dashboard?tab=projects" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-            Review application
-          </a>
-        </p>
-      `),
+    await sendPush(application.ownerId, {
+      title: 'New application',
+      body: `${application.applicantName} applied for ${application.roleTitle} on ${application.projectTitle}`,
+      url: '/dashboard?tab=projects',
     });
   },
 );
@@ -130,46 +178,54 @@ export const notifyApplicationDecision = onDocumentUpdated(
     if (before.status === after.status) return;
     if (after.status !== 'accepted' && after.status !== 'rejected') return;
 
+    const accepted = after.status === 'accepted';
+
     const applicantSnap = await getFirestore().doc(`users/${after.applicantId}/private/info`).get();
     const applicantEmail = applicantSnap.data()?.email;
-    if (!applicantEmail) {
-      logger.warn('Applicant has no email on file, skipping notification', { applicantId: after.applicantId });
-      return;
+    if (applicantEmail) {
+      await sendEmail({
+        to: applicantEmail,
+        subject: accepted
+          ? `You're in! ${after.projectTitle} accepted your application`
+          : `Update on your application to ${after.projectTitle}`,
+        html: emailShell(
+          accepted
+            ? `
+              <p style="font-size: 15px; line-height: 1.5;">
+                Good news — you were accepted for <strong>${escapeHtml(after.roleTitle)}</strong> on
+                "<strong>${escapeHtml(after.projectTitle)}</strong>". The team's contact info and chat are now
+                unlocked on your dashboard.
+              </p>
+              <p style="margin-top: 20px;">
+                <a href="${APP_URL.value()}/projects/${after.projectId}" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
+                  Open project
+                </a>
+              </p>
+            `
+            : `
+              <p style="font-size: 15px; line-height: 1.5;">
+                Your application for <strong>${escapeHtml(after.roleTitle)}</strong> on
+                "<strong>${escapeHtml(after.projectTitle)}</strong>" wasn't accepted this time. Don't worry — there
+                are always new projects posting on TeamUp.
+              </p>
+              <p style="margin-top: 20px;">
+                <a href="${APP_URL.value()}/feed" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
+                  Browse projects
+                </a>
+              </p>
+            `,
+        ),
+      });
+    } else {
+      logger.warn('Applicant has no email on file, skipping email notification', { applicantId: after.applicantId });
     }
 
-    const accepted = after.status === 'accepted';
-    await sendEmail({
-      to: applicantEmail,
-      subject: accepted
-        ? `You're in! ${after.projectTitle} accepted your application`
-        : `Update on your application to ${after.projectTitle}`,
-      html: emailShell(
-        accepted
-          ? `
-            <p style="font-size: 15px; line-height: 1.5;">
-              Good news — you were accepted for <strong>${escapeHtml(after.roleTitle)}</strong> on
-              "<strong>${escapeHtml(after.projectTitle)}</strong>". The team's contact info and chat are now
-              unlocked on your dashboard.
-            </p>
-            <p style="margin-top: 20px;">
-              <a href="${APP_URL.value()}/projects/${after.projectId}" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-                Open project
-              </a>
-            </p>
-          `
-          : `
-            <p style="font-size: 15px; line-height: 1.5;">
-              Your application for <strong>${escapeHtml(after.roleTitle)}</strong> on
-              "<strong>${escapeHtml(after.projectTitle)}</strong>" wasn't accepted this time. Don't worry — there
-              are always new projects posting on TeamUp.
-            </p>
-            <p style="margin-top: 20px;">
-              <a href="${APP_URL.value()}/feed" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-                Browse projects
-              </a>
-            </p>
-          `,
-      ),
+    await sendPush(after.applicantId, {
+      title: accepted ? "You're in!" : 'Application update',
+      body: accepted
+        ? `You were accepted for ${after.roleTitle} on ${after.projectTitle}`
+        : `Your application to ${after.projectTitle} wasn't accepted this time`,
+      url: accepted ? `/projects/${after.projectId}` : '/feed',
     });
   },
 );

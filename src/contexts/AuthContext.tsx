@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '@/lib/firebase';
+import { forgetPushTokenOnSignOut } from '@/lib/messaging';
 import type { UserProfile } from '@/types';
 
 interface AuthContextValue {
@@ -133,7 +134,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadProfile(cred.user.uid);
   };
 
-  const signOut = async () => firebaseSignOut(auth);
+  const signOut = async () => {
+    if (user) await forgetPushTokenOnSignOut(user.uid);
+    await firebaseSignOut(auth);
+  };
 
   const refreshProfile = async () => {
     if (user) await loadProfile(user.uid);

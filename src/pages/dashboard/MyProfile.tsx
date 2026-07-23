@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Pencil, Link2, Check } from 'lucide-react';
+import { Pencil, Link2, Check, Bell, BellOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, Badge, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,7 @@ import { TagPicker } from '@/components/ui/TagPicker';
 import { ContactLinks } from '@/components/profile/ContactLinks';
 import { FeedbackButton } from '@/components/FeedbackButton';
 import { useUpdateProfile, uploadAvatar } from '@/hooks/useProfile';
+import { useNotifications } from '@/hooks/useNotifications';
 import { lastActiveLabel } from '@/utils/dates';
 import { SKILL_OPTIONS, SKILL_LEVEL_OPTIONS, INTEREST_OPTIONS, GRADE_OPTIONS } from '@/constants/options';
 import { profileSchema, type ProfileFormValues } from '@/utils/validation';
@@ -20,6 +21,7 @@ import type { Skill, SkillLevel, Interest, Grade } from '@/types';
 export default function MyProfile() {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const updateMutation = useUpdateProfile(user?.uid);
+  const { status: pushStatus, enable: enablePush } = useNotifications(user?.uid);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -338,6 +340,44 @@ export default function MyProfile() {
           </Button>
         </Link>
       </div>
+
+      <Card>
+        <p className="mb-3 text-sm font-medium text-surface-700">Settings</p>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            {pushStatus === 'denied' ? (
+              <BellOff size={16} className="mt-0.5 shrink-0 text-surface-400" />
+            ) : (
+              <Bell size={16} className="mt-0.5 shrink-0 text-surface-400" />
+            )}
+            <div>
+              <p className="text-sm text-surface-800">Push notifications</p>
+              <p className="text-xs text-surface-400">
+                {pushStatus === 'unsupported' && "Not supported on this browser/device."}
+                {pushStatus === 'checking' && 'Checking...'}
+                {pushStatus === 'default' && 'Get notified about applications and decisions.'}
+                {pushStatus === 'enabling' && 'Requesting permission...'}
+                {pushStatus === 'granted' && 'Enabled on this device.'}
+                {pushStatus === 'denied' && 'Blocked — enable notifications for this site in browser settings.'}
+              </p>
+            </div>
+          </div>
+          {(pushStatus === 'default' || pushStatus === 'enabling') && (
+            <Button size="sm" variant="secondary" onClick={enablePush} loading={pushStatus === 'enabling'} type="button">
+              Enable
+            </Button>
+          )}
+        </div>
+
+        <Link
+          to="/privacy"
+          className="mt-4 flex items-center gap-2.5 border-t border-surface-100 pt-3.5 text-sm text-surface-600 hover:text-surface-900"
+        >
+          <ShieldCheck size={16} className="shrink-0 text-surface-400" />
+          Privacy policy
+        </Link>
+      </Card>
 
       <FeedbackButton label="Report a bug or issue" variant="secondary" className="w-full" />
 
