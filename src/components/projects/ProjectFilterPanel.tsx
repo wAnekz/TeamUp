@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react';
-import { TagPicker } from '@/components/ui/TagPicker';
-import { SKILL_OPTIONS, INTEREST_OPTIONS } from '@/constants/options';
+import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
+import { SKILL_CATEGORIES, INTEREST_CATEGORIES } from '@/constants/options';
 import type { ProjectFilters, ProjectType } from '@/types';
 
 export function ProjectFilterPanel({
@@ -44,9 +44,10 @@ export function ProjectFilterPanel({
         </button>
       </div>
 
-      <TagPicker
+      <CategorizedTagPicker
         label="Skills"
-        options={SKILL_OPTIONS}
+        categories={SKILL_CATEGORIES}
+        searchPlaceholder="Search skills..."
         selected={filters.skills}
         onToggle={(skill) =>
           onChange({
@@ -56,9 +57,9 @@ export function ProjectFilterPanel({
         }
       />
 
-      <TagPicker
+      <CategorizedTagPicker
         label="Interests"
-        options={INTEREST_OPTIONS}
+        categories={INTEREST_CATEGORIES}
         selected={filters.interests}
         onToggle={(interest) =>
           onChange({

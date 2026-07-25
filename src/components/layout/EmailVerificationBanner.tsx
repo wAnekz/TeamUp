@@ -52,20 +52,20 @@ export function EmailVerificationBanner() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
         <Mail size={16} className="shrink-0 text-amber-600" />
         <p className="text-sm text-amber-800">
-          Подтверди почту <strong>{user.email}</strong> — без этого нельзя опубликовать проект, пост
-          «ищу команду» или отклик.
+          Verify your email <strong>{user.email}</strong> — you can't publish a project, a "looking for team" post,
+          or an application until you do.
         </p>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="secondary" onClick={handleCheck} loading={checking}>
-            Я подтвердил
+            I verified
           </Button>
           <Button size="sm" variant="ghost" onClick={handleResend} loading={sending}>
-            Отправить ещё раз
+            Resend email
           </Button>
         </div>
-        {justSent && <p className="w-full text-xs text-amber-700">Письмо отправлено, проверь почту (и папку "Спам").</p>}
+        {justSent && <p className="w-full text-xs text-amber-700">Email sent — check your inbox (and spam folder).</p>}
         {stillUnverified && (
-          <p className="w-full text-xs text-amber-700">Пока не вижу подтверждения — перейди по ссылке в письме и попробуй снова.</p>
+          <p className="w-full text-xs text-amber-700">Still not seeing it as verified — click the link in the email and try again.</p>
         )}
       </div>
     </div>

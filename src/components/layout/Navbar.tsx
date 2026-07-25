@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Compass, Users, LayoutGrid, PlusCircle, User, ShieldAlert } from 'lucide-react';
+import { Compass, Users, LayoutGrid, PlusCircle, User, ShieldAlert, Calendar } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from '@/components/ui/primitives';
 import { useIsModerator } from '@/hooks/useReports';
@@ -8,6 +8,7 @@ import { cn } from '@/utils/cn';
 
 const navItems = [
   { to: '/feed', label: 'Projects', icon: Compass },
+  { to: '/events', label: 'Events', icon: Calendar },
   { to: '/looking-for-team', label: 'Teammates', icon: Users },
   { to: '/projects/new', label: 'Create', icon: PlusCircle },
   { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },

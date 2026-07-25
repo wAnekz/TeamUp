@@ -6,8 +6,8 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { TagPicker } from '@/components/ui/TagPicker';
-import { SKILL_OPTIONS, SKILL_LEVEL_OPTIONS, INTEREST_OPTIONS, GRADE_OPTIONS } from '@/constants/options';
+import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
+import { SKILL_CATEGORIES, SKILL_LEVEL_OPTIONS, INTEREST_CATEGORIES, GRADE_OPTIONS } from '@/constants/options';
 import { profileSchema, type ProfileFormValues } from '@/utils/validation';
 import type { Skill, SkillLevel, Interest } from '@/types';
 import { useState } from 'react';
@@ -123,7 +123,14 @@ export default function CompleteProfile() {
 
         <Textarea label="Bio" placeholder="What are you working on?" maxLength={200} value={bio} {...register('bio')} />
 
-        <TagPicker label="Skills" options={SKILL_OPTIONS} selected={skills.map((s) => s.skill)} onToggle={toggleSkill} error={errors.skills?.message as string} />
+        <CategorizedTagPicker
+          label="Skills"
+          categories={SKILL_CATEGORIES}
+          searchPlaceholder="Search skills..."
+          selected={skills.map((s) => s.skill)}
+          onToggle={toggleSkill}
+          error={errors.skills?.message as string}
+        />
 
         {skills.length > 0 && (
           <div className="space-y-2 rounded-xl bg-surface-100 p-3">
@@ -149,7 +156,7 @@ export default function CompleteProfile() {
           </div>
         )}
 
-        <TagPicker label="Interests" options={INTEREST_OPTIONS} selected={interests} onToggle={toggleInterest} error={errors.interests?.message as string} />
+        <CategorizedTagPicker label="Interests" categories={INTEREST_CATEGORIES} selected={interests} onToggle={toggleInterest} error={errors.interests?.message as string} />
 
         <div>
           <p className="mb-1.5 text-sm font-medium text-surface-700">

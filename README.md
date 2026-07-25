@@ -11,10 +11,14 @@ A PWA that helps high school students (14–18) in Almaty find teammates for hac
 - Applications with a race-free accept flow (slot counts and status update atomically)
 - "Looking for team" posts for people without a project yet
 - In-team chat with per-user blocking/muting
+- Curated Events (hackathons/olympiads) — moderator-managed, with format (online/offline/hybrid), organizer, registration link/deadline, and prize pool; "Find a team for this event" deep-links into Looking for team
+- Skills and Interests are both large, categorized taxonomies (CategorizedTagPicker) — skills for what a role needs, interests for a project's topic/domain
+- Profile strength progress bar nudging richer (but still optional) profile fields
+- Dashboard deadline widget surfacing your own closing event-projects with pending applications, plus upcoming curated events
 - Report queue with a moderator role, plus automated first-pass content screening (Groq) on public posts
 - Rate limiting on messages, reports, and applications via Cloud Functions
 - Email notifications on new applications and accept/reject decisions
-- Push notifications (FCM) on the same events, opt-in from Settings
+- Push notifications (FCM) on applications, accept/reject decisions, and new team chat messages, opt-in from Settings
 - Auto-archive for stale or past-deadline projects
 - Installable PWA, offline-friendly caching
 
@@ -101,7 +105,7 @@ The userbase is 14–18, so this got more attention than a typical side project:
 
 ## Push notifications setup
 
-Push (`functions/src/notifications.ts` → `sendPush`, `src/lib/messaging.ts`) reuses the same Firebase project as everything else, but needs two things filled in that aren't provided by `npm install`:
+Push (`functions/src/notifications.ts` → `sendPush`, `src/lib/messaging.ts`) reuses the same Firebase project as everything else, but needs two things filled in that aren't provided by `npm install`. It fires on new applications, accept/reject decisions, and new team chat messages (chat is push-only, no email — a live chat firing an email per message would be spammy).
 
 1. **VAPID key** — Firebase console → Project settings → Cloud Messaging → Web configuration → "Generate key pair". Put it in `.env` as `VITE_FIREBASE_VAPID_KEY`. Without it, the "Enable" button in Settings silently does nothing (checked in `useNotifications`/`requestPushPermission`).
 2. **`public/firebase-messaging-sw.js`** hardcodes the same `firebaseConfig` values as `.env`, because it's a static file (not built by Vite, can't read `import.meta.env`) that has to run inside the service worker. If the Firebase project ever changes, update both places.

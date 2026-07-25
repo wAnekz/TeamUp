@@ -89,6 +89,21 @@ export async function sendPush(uid: string, opts: { title: string; body: string;
       webpush: { fcmOptions: { link: opts.url } },
     });
 
+    // sendEachForMulticast never throws for a per-token failure — it just
+    // marks that entry success:false in responses[]. Without logging this,
+    // a push that silently fails to deliver (bad VAPID/sender mismatch,
+    // malformed payload, etc.) leaves no trace anywhere. Log every failure
+    // so the next test run actually tells us why, instead of "nothing
+    // happened".
+    logger.info('Push send result', {
+      uid,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      failures: response.responses
+        .map((r, i) => (r.success ? null : { token: tokens[i].slice(0, 12) + '…', code: r.error?.code, message: r.error?.message }))
+        .filter(Boolean),
+    });
+
     // Prune tokens FCM reports as no longer valid (uninstalled/expired/revoked)
     // so this list doesn't grow forever with dead entries.
     const staleTokens = response.responses
@@ -229,6 +244,36 @@ export const notifyApplicationDecision = onDocumentUpdated(
     });
   },
 );
+
+// projects/{projectId}/messages/{messageId} created → push (not email — a
+// live chat is exactly the case where email would be spammy) to every team
+// member except whoever just sent the message. Reads `members` +
+// `authorId` off the project doc rather than a separate query, since
+// Project already denormalizes the full team list for team-chat access
+// checks (see firestore.rules).
+export const notifyNewChatMessage = onDocumentCreated('projects/{projectId}/messages/{messageId}', async (event) => {
+  const message = event.data?.data();
+  const projectId = event.params.projectId;
+  if (!message) return;
+
+  const projectSnap = await getFirestore().doc(`projects/${projectId}`).get();
+  const project = projectSnap.data();
+  if (!project) return;
+
+  const recipients = [project.authorId, ...(project.members ?? [])].filter(
+    (uid: string, i: number, arr: string[]) => uid !== message.authorId && arr.indexOf(uid) === i,
+  );
+
+  await Promise.all(
+    recipients.map((uid) =>
+      sendPush(uid, {
+        title: project.title,
+        body: `${message.authorName}: ${String(message.text).slice(0, 120)}`,
+        url: `/projects/${projectId}`,
+      }),
+    ),
+  );
+});
 
 export function escapeHtml(value: unknown) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));

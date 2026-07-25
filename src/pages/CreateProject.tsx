@@ -5,9 +5,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { Input, Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { TagPicker } from '@/components/ui/TagPicker';
+import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
 import { Card, Skeleton } from '@/components/ui/primitives';
-import { SKILL_OPTIONS, INTEREST_OPTIONS } from '@/constants/options';
+import { SKILL_CATEGORIES, INTEREST_CATEGORIES } from '@/constants/options';
 import { projectSchema, type ProjectFormValues } from '@/utils/validation';
 import { useCreateProject, useProject, useUpdateProject } from '@/hooks/useProjects';
 import { useAuth } from '@/contexts/AuthContext';
@@ -188,10 +188,10 @@ export default function CreateProject() {
           )}
         </div>
 
-        <TagPicker
+        <CategorizedTagPicker
           label="Interests"
           name="interests"
-          options={INTEREST_OPTIONS}
+          categories={INTEREST_CATEGORIES}
           selected={interests}
           onToggle={(i) =>
             setValue('interests', interests.includes(i) ? interests.filter((x) => x !== i) : [...interests, i], {
@@ -243,10 +243,11 @@ export default function CreateProject() {
                     />
                   </div>
                   <div className="mt-3">
-                    <TagPicker
+                    <CategorizedTagPicker
                       label="Required skills"
                       name={`roles.${index}.requiredSkills`}
-                      options={SKILL_OPTIONS}
+                      categories={SKILL_CATEGORIES}
+                      searchPlaceholder="Search skills..."
                       selected={roleSkills as Skill[]}
                       onToggle={(skill) =>
                         setValue(

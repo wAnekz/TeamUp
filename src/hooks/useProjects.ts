@@ -184,3 +184,54 @@ export function useAuthorProjects(authorId: string | undefined) {
     },
   });
 }
+
+export interface UpcomingDeadline {
+  project: Project;
+  daysLeft: number;
+  pendingApplications: number;
+}
+
+/**
+ * Powers the "Upcoming deadlines" dashboard widget: the caller's own
+ * event-type, open, non-draft projects with a deadline still in the
+ * future, each annotated with how many applications are still pending —
+ * the two things that make a deadline actually urgent to act on (a
+ * deadline with zero open applications needs no attention).
+ */
+export function useUpcomingDeadlines(uid: string | undefined) {
+  return useQuery({
+    queryKey: ['projects', 'upcomingDeadlines', uid],
+    enabled: !!uid,
+    queryFn: async (): Promise<UpcomingDeadline[]> => {
+      const [projectsSnap, applicationsSnap] = await Promise.all([
+        getDocs(
+          query(
+            collection(db, 'projects'),
+            where('authorId', '==', uid),
+            where('isDraft', '==', false),
+            where('type', '==', 'event'),
+            where('status', '==', 'open'),
+          ),
+        ),
+        getDocs(query(collection(db, 'applications'), where('ownerId', '==', uid), where('status', '==', 'pending'))),
+      ]);
+
+      const pendingByProject = new Map<string, number>();
+      for (const d of applicationsSnap.docs) {
+        const projectId = d.data().projectId as string;
+        pendingByProject.set(projectId, (pendingByProject.get(projectId) ?? 0) + 1);
+      }
+
+      const now = Date.now();
+      return projectsSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as Project)
+        .filter((p) => p.deadline && p.deadline.toMillis() > now)
+        .map((project) => ({
+          project,
+          daysLeft: Math.ceil((project.deadline!.toMillis() - now) / (1000 * 60 * 60 * 24)),
+          pendingApplications: pendingByProject.get(project.id) ?? 0,
+        }))
+        .sort((a, b) => a.daysLeft - b.daysLeft);
+    },
+  });
+}

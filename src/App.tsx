@@ -15,6 +15,8 @@ const Feed = lazy(() => import('@/pages/Feed'));
 const ProjectDetail = lazy(() => import('@/pages/ProjectDetail'));
 const CreateProject = lazy(() => import('@/pages/CreateProject'));
 const LookingForTeam = lazy(() => import('@/pages/LookingForTeam'));
+const Events = lazy(() => import('@/pages/Events'));
+const EventDetail = lazy(() => import('@/pages/EventDetail'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const UserProfile = lazy(() => import('@/pages/UserProfile'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
@@ -114,6 +116,30 @@ export default function App() {
             <AppShell>
               <Page>
                 <UserProfile />
+              </Page>
+            </AppShell>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/events"
+        element={
+          <RequireAuth>
+            <AppShell>
+              <Page>
+                <Events />
+              </Page>
+            </AppShell>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/events/:id"
+        element={
+          <RequireAuth>
+            <AppShell>
+              <Page>
+                <EventDetail />
               </Page>
             </AppShell>
           </RequireAuth>

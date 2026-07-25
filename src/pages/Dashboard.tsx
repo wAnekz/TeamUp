@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/utils/cn';
+import { DeadlineWidget } from '@/components/dashboard/DeadlineWidget';
 
 // Only one tab is ever visible at a time, so each is its own chunk rather
 // than all four (MyProfile especially — form + validation + avatar upload
@@ -32,6 +33,7 @@ export default function Dashboard() {
   return (
     <div>
       <h1 className="mb-4 text-xl font-bold text-surface-900">Dashboard</h1>
+      <DeadlineWidget />
       <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-surface-100 p-1 scrollbar-none">
         {TABS.map((t) => (
           <button

@@ -7,13 +7,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, Badge, Avatar } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
-import { TagPicker } from '@/components/ui/TagPicker';
+import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
 import { ContactLinks } from '@/components/profile/ContactLinks';
 import { FeedbackButton } from '@/components/FeedbackButton';
 import { useUpdateProfile, uploadAvatar } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { lastActiveLabel } from '@/utils/dates';
-import { SKILL_OPTIONS, SKILL_LEVEL_OPTIONS, INTEREST_OPTIONS, GRADE_OPTIONS } from '@/constants/options';
+import { computeProfileCompleteness } from '@/utils/profileCompleteness';
+import { SKILL_CATEGORIES, SKILL_LEVEL_OPTIONS, INTEREST_CATEGORIES, GRADE_OPTIONS } from '@/constants/options';
 import { profileSchema, type ProfileFormValues } from '@/utils/validation';
 import { scrollToFirstError } from '@/utils/formErrors';
 import type { Skill, SkillLevel, Interest, Grade } from '@/types';
@@ -144,8 +145,23 @@ export default function MyProfile() {
   };
 
   const AvatarPicker = (
-    <button onClick={() => fileRef.current?.click()} className="relative shrink-0" type="button">
+    <button
+      onClick={() => fileRef.current?.click()}
+      className="group relative shrink-0 rounded-full"
+      type="button"
+      aria-label="Change photo"
+      title="Change photo"
+    >
       <Avatar src={profile.avatarUrl} name={profile.name} size={72} />
+      {/* Always-visible affordance so it's obvious the avatar is clickable,
+          not just a static picture — a plain <button> around an <img> gave
+          no visual cue at all. */}
+      <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+        <Pencil size={20} className="text-white" />
+      </span>
+      <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-accent-600 text-white shadow-sm">
+        <Pencil size={12} />
+      </span>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
     </button>
   );
@@ -194,9 +210,10 @@ export default function MyProfile() {
         </Card>
 
         <Card>
-          <TagPicker
+          <CategorizedTagPicker
             label="Skills"
-            options={SKILL_OPTIONS}
+            categories={SKILL_CATEGORIES}
+            searchPlaceholder="Search skills..."
             selected={skills.map((s) => s.skill)}
             onToggle={toggleSkill}
             error={errors.skills?.message as string}
@@ -227,9 +244,9 @@ export default function MyProfile() {
         </Card>
 
         <Card>
-          <TagPicker
+          <CategorizedTagPicker
             label="Interests"
-            options={INTEREST_OPTIONS}
+            categories={INTEREST_CATEGORIES}
             selected={interests}
             onToggle={toggleInterest}
             error={errors.interests?.message as string}
@@ -271,6 +288,26 @@ export default function MyProfile() {
           Edit profile
         </Button>
       </div>
+
+      {(() => {
+        const { percent, missing } = computeProfileCompleteness(profile);
+        if (percent >= 100) return null;
+        return (
+          <Card>
+            <div className="flex items-center justify-between text-sm">
+              <p className="font-medium text-surface-700">Profile strength</p>
+              <p className="text-surface-500">{percent}%</p>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-100">
+              <div className="h-full rounded-full bg-accent-600 transition-all" style={{ width: `${percent}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-surface-500">
+              {missing.slice(0, 2).join(' · ')}
+              {missing.length > 2 ? ` · +${missing.length - 2} more` : ''}
+            </p>
+          </Card>
+        );
+      })()}
 
       <Card>
         <div className="flex items-start gap-4">

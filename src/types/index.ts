@@ -2,34 +2,160 @@ import type { Timestamp } from 'firebase/firestore';
 
 // ---------- Shared enums / constants ----------
 
+// Grouped by category purely for display (see SKILL_CATEGORIES in
+// constants/options.ts) — this flat list is still the single source of
+// truth for the Skill union and what's actually stored on documents.
+// The original 12 values (Frontend, Backend, Flutter, React, Python, Java,
+// UI/UX, Design, Video Editing, Presentation, Marketing, Analytics) are
+// kept exactly as they were so existing profiles/projects/posts that
+// already reference them don't break.
 export const SKILLS = [
+  // Programming & Development
   'Frontend',
   'Backend',
-  'Flutter',
   'React',
+  'Vue',
+  'Flutter',
+  'React Native',
   'Python',
   'Java',
+  'JavaScript',
+  'TypeScript',
+  'C++',
+  'C#',
+  'Swift',
+  'Kotlin',
+  'Go',
+  'PHP',
+  'SQL & Databases',
+  'Node.js',
+  'HTML/CSS',
+  'API Development',
+  'DevOps',
+  'Cloud Computing',
+  'Cybersecurity',
+  'Machine Learning',
+  'Data Science',
+  'Data Analysis',
+  'Blockchain',
+  'AR/VR Development',
+  // Design & Creative
   'UI/UX',
   'Design',
+  'Graphic Design',
+  'Figma',
   'Video Editing',
+  'Photography',
+  'Animation',
+  '3D Modeling',
+  'Illustration',
+  'Branding',
+  // Content & Communication
   'Presentation',
+  'Copywriting',
+  'Public Speaking',
+  'Content Writing',
+  'Social Media',
+  'Translation',
+  // Business & Management
   'Marketing',
   'Analytics',
+  'Project Management',
+  'Sales',
+  'Finance',
+  'Event Organizing',
+  'Fundraising',
+  // Research & Science
+  'Research',
+  'Statistics',
 ] as const;
 export type Skill = (typeof SKILLS)[number];
 
 export const SKILL_LEVELS = ['beginner', 'intermediate', 'advanced'] as const;
 export type SkillLevel = (typeof SKILL_LEVELS)[number];
 
+// Grouped by category purely for display (see INTEREST_CATEGORIES in
+// constants/options.ts) — this flat list is still the single source of
+// truth for the Interest union and what's actually stored on documents.
+// The original 8 values (AI, Robotics, Olympiads, Startups, Web, Mobile,
+// Cybersecurity, Game Development) are kept exactly as they were so
+// existing profiles/projects/posts that already reference them don't break.
 export const INTERESTS = [
+  // Technology & Programming
   'AI',
-  'Robotics',
-  'Olympiads',
-  'Startups',
   'Web',
   'Mobile',
   'Cybersecurity',
   'Game Development',
+  'Data Science',
+  'Machine Learning',
+  'Blockchain',
+  'Cloud Computing',
+  'DevOps',
+  'AR/VR',
+  'IoT & Hardware',
+  // Robotics & Engineering
+  'Robotics',
+  'Electronics',
+  'Mechanical Engineering',
+  '3D Printing',
+  // Design & Creative
+  'UI/UX Design',
+  'Graphic Design',
+  'Animation',
+  '3D Modeling',
+  'Video Editing',
+  'Photography',
+  'Branding',
+  'Illustration',
+  // Business & Entrepreneurship
+  'Startups',
+  'Marketing',
+  'Finance',
+  'Product Management',
+  'E-commerce',
+  'Sales',
+  'Investing',
+  // Science & Research
+  'Biology',
+  'Chemistry',
+  'Physics',
+  'Mathematics',
+  'Environmental Science',
+  'Neuroscience',
+  'Space & Astronomy',
+  // Academic Competitions
+  'Olympiads',
+  'Hackathons',
+  'Case Competitions',
+  'Model UN',
+  'Science Fairs',
+  'Debate',
+  // Social & Community
+  'Volunteering',
+  'Education',
+  'Mentorship',
+  'Non-profit',
+  'Social Impact',
+  'Public Speaking',
+  // Arts & Media
+  'Music',
+  'Writing',
+  'Filmmaking',
+  'Journalism',
+  'Podcasting',
+  'Theatre',
+  // Sports & Games
+  'Esports',
+  'Chess',
+  'Football',
+  'Basketball',
+  'Fitness',
+  'Outdoor Adventures',
+  // Languages & Culture
+  'Language Exchange',
+  'Travel',
+  'Cultural Exchange',
 ] as const;
 export type Interest = (typeof INTERESTS)[number];
 
@@ -179,6 +305,33 @@ export interface LookingForTeamPost {
   interests: Interest[];
   active: boolean;
   availableUntil?: Timestamp; // optional self-declared "still looking" deadline
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// ---------- Events (real-world hackathons/olympiads TeamUp promotes at) ----------
+// Curated content, not user-generated — created/edited by moderators only
+// (see firestore.rules). The "Find a team" button on the detail page links
+// into the existing lookingForTeam feed pre-filtered/pre-tagged by
+// `competitionTag`, which matches the free-text `desiredCompetitions` field
+// people already fill in on their own posts — no new matching system needed.
+export type EventFormat = 'online' | 'offline' | 'hybrid';
+
+export interface EventItem {
+  id: string;
+  title: string;
+  description: string; // longer blurb shown on the detail page, max 800 chars
+  competitionTag: string; // matches LookingForTeamPost.desiredCompetitions entries, e.g. "AI Hackathon 2026"
+  date: Timestamp;
+  format?: EventFormat; // online / offline / hybrid — optional so old events without it still render
+  location?: string; // venue/city for offline & hybrid events; irrelevant when format === 'online'
+  organizer?: string | null; // who's running it, e.g. "NIS Almaty" or "Astana Hub"
+  registrationUrl?: string | null; // external sign-up link, if the event is run outside TeamUp
+  registrationDeadline?: Timestamp | null; // can be earlier than `date` itself
+  prizePool?: string | null; // free text, e.g. "500 000 KZT" or "Internship offers" — amounts/formats vary too much for a number field
+  teamSizeHint?: string | null; // free text, e.g. "Teams of 2-4" — the event's own rules, distinct from any TeamUp project's roles
+  imageUrl?: string | null;
+  isActive: boolean; // moderators can hide a past event without deleting it
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

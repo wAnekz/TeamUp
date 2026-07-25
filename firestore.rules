@@ -157,6 +157,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---------------- events (curated hackathons/olympiads TeamUp promotes) ----------------
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow create: if isModerator();
+      allow update: if isModerator();
+      allow delete: if isModerator();
+    }
+
     // ---------------- reports ----------------
     match /reports/{reportId} {
       allow read: if isModerator();

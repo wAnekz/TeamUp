@@ -12,12 +12,12 @@ export function lastActiveLabel(lastActiveAt: Timestamp | undefined): string {
   return `Last seen ${days} days ago`;
 }
 
-export function formatDeadline(ts: Timestamp | undefined): string {
+export function formatDeadline(ts: Timestamp | null | undefined): string {
   if (!ts) return '';
   return format(ts.toDate(), 'MMM d, yyyy');
 }
 
-export function isDeadlinePassed(ts: Timestamp | undefined): boolean {
+export function isDeadlinePassed(ts: Timestamp | null | undefined): boolean {
   if (!ts) return false;
   return ts.toDate().getTime() < Date.now();
 }
