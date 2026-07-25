@@ -32,7 +32,7 @@ export default function Events() {
         )}
       </div>
       <p className="mb-4 text-sm text-surface-500">
-        Hackathons and olympiads TeamUp is at — tap one to find teammates for it specifically.
+        Hackathons and olympiads TeamUp is at - tap one to find teammates for it specifically.
       </p>
 
       {isError && <ErrorState error={error} onRetry={() => refetch()} />}
@@ -47,7 +47,7 @@ export default function Events() {
 
       {!isLoading && !isError && events?.length === 0 && (
         <div className="rounded-2xl border border-dashed border-surface-300 py-16 text-center text-surface-500">
-          No events posted yet — check back soon.
+          No events posted yet - check back soon.
         </div>
       )}
 
@@ -166,7 +166,7 @@ function CreateEventModal({ open, onClose }: { open: boolean; onClose: () => voi
           onChange={(e) => setCompetitionTag(e.target.value)}
         />
         <p className="-mt-3 text-xs text-surface-400">
-          Should match what people type under "Desired competitions" on Looking for team — this is how "Find a team"
+          Should match what people type under "Desired competitions" on Looking for team - this is how "Find a team"
           filters the feed.
         </p>
 

@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="max-w-sm space-y-3 rounded-2xl border border-surface-200 bg-white p-7 shadow-card">
           <h1 className="text-lg font-semibold text-surface-900">Something went wrong</h1>
           <p className="text-sm text-surface-500">
-            This page hit an unexpected error. Reloading usually fixes it — your data is safe either way.
+            This page hit an unexpected error. Reloading usually fixes it - your data is safe either way.
           </p>
           <button
             type="button"

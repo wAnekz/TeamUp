@@ -165,7 +165,7 @@ export default function CreateProject() {
 
         <Textarea
           label="Additional requirements (optional)"
-          placeholder="Anything the skill tags don't cover — e.g. availability, prior experience, willingness to meet in person, language..."
+          placeholder="Anything the skill tags don't cover - e.g. availability, prior experience, willingness to meet in person, language..."
           maxLength={300}
           value={additionalRequirements}
           {...register('additionalRequirements')}
@@ -235,7 +235,7 @@ export default function CreateProject() {
                       error={errors.roles?.[index]?.title?.message}
                     />
                     <Input
-                      label={`Slots${minSlots > 1 ? ` (min ${minSlots} — already filled)` : ''}`}
+                      label={`Slots${minSlots > 1 ? ` (min ${minSlots} - already filled)` : ''}`}
                       type="number"
                       min={minSlots}
                       {...register(`roles.${index}.slotsTotal` as const)}

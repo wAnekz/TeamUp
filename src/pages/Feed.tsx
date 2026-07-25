@@ -115,7 +115,7 @@ export default function Feed() {
             )}
             {!loadingPool && !poolError && recommendations.length === 0 && (
               <div className="rounded-2xl border border-dashed border-surface-300 py-16 text-center text-surface-500">
-                No strong matches yet — add more skills and interests to your profile to improve recommendations.
+                No strong matches yet - add more skills and interests to your profile to improve recommendations.
               </div>
             )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -50,7 +50,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
       >
         {sent ? (
           <p className="text-sm text-surface-600">
-            Thanks — a moderator will look into it. This isn't public and the {targetType} owner won't be notified.
+            Thanks - a moderator will look into it. This isn't public and the {targetType} owner won't be notified.
           </p>
         ) : (
           <div className="space-y-3">

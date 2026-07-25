@@ -73,12 +73,12 @@ export function FeedbackButton({
       >
         {sent ? (
           <p className="text-sm text-surface-600">
-            Sent straight to the developer. Nothing more needed on your end — thanks for the heads up.
+            Sent straight to the developer. Nothing more needed on your end - thanks for the heads up.
           </p>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-surface-500">
-              Found a bug, or something looks broken? Describe it below — this goes directly to the person building
+              Found a bug, or something looks broken? Describe it below - this goes directly to the person building
               TeamUp, not to a support queue.
             </p>
             <textarea

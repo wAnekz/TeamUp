@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { EventItem } from '@/types';
 
@@ -76,6 +76,20 @@ export function useDeactivateEvent() {
   return useMutation({
     mutationFn: async (id: string) => {
       await updateDoc(doc(db, 'events', id), { isActive: false, updatedAt: serverTimestamp() });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['events'] }),
+  });
+}
+
+// Permanent delete — firestore.rules already allows this for moderators
+// (allow delete: if isModerator()), the UI just never had a button wired
+// up to it. Prefer useDeactivateEvent for a past event you might want to
+// keep around for reference; use this when it shouldn't exist at all.
+export function useDeleteEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await deleteDoc(doc(db, 'events', id));
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['events'] }),
   });

@@ -33,7 +33,7 @@ export function ApplyModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Apply — ${roleTitle}`}>
+    <Modal open={open} onClose={onClose} title={`Apply - ${roleTitle}`}>
       <form onSubmit={handleSubmit(submit)} className="space-y-4">
         <Textarea
           label="Short message"

@@ -116,7 +116,7 @@ export default function LookingForTeam() {
                   <Badge tone="gray">Available until {formatDeadline(post.availableUntil)}</Badge>
                 )}
                 {expired && <Badge tone="red">Availability window passed</Badge>}
-                {!expired && stale && <Badge tone="yellow">Might be outdated — posted a while ago</Badge>}
+                {!expired && stale && <Badge tone="yellow">Might be outdated - posted a while ago</Badge>}
                 {isMine && (
                   <Button size="sm" variant="secondary" onClick={() => deactivateMutation.mutate(post.id)}>
                     Found a team

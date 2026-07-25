@@ -1,6 +1,8 @@
-import { useParams, Link } from 'react-router-dom';
-import { Calendar, MapPin, Users, ArrowLeft, Globe, Trophy, ExternalLink, Clock } from 'lucide-react';
-import { useEvent } from '@/hooks/useEvents';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Calendar, MapPin, Users, ArrowLeft, Globe, Trophy, ExternalLink, Clock, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useIsModerator } from '@/hooks/useReports';
+import { useEvent, useDeleteEvent } from '@/hooks/useEvents';
 import { Card, Skeleton, Badge } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { formatDeadline, isDeadlinePassed } from '@/utils/dates';
@@ -10,7 +12,11 @@ const FORMAT_LABEL: Record<EventFormat, string> = { online: 'Online', offline: '
 
 export default function EventDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: isModerator } = useIsModerator(user?.uid);
   const { data: event, isLoading } = useEvent(id);
+  const deleteMutation = useDeleteEvent();
 
   if (isLoading) return <Skeleton className="mx-auto h-64 max-w-xl" />;
 
@@ -21,11 +27,25 @@ export default function EventDetail() {
   const format = event.format ?? 'offline';
   const registrationClosed = event.registrationDeadline ? isDeadlinePassed(event.registrationDeadline) : false;
 
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!confirm(`Delete "${event.title}"? This can't be undone.`)) return;
+    await deleteMutation.mutateAsync(id);
+    navigate('/events');
+  };
+
   return (
     <div className="mx-auto max-w-xl">
-      <Link to="/events" className="mb-4 inline-flex items-center gap-1 text-sm text-surface-500 hover:text-surface-700">
-        <ArrowLeft size={14} /> All events
-      </Link>
+      <div className="mb-4 flex items-center justify-between">
+        <Link to="/events" className="inline-flex items-center gap-1 text-sm text-surface-500 hover:text-surface-700">
+          <ArrowLeft size={14} /> All events
+        </Link>
+        {isModerator && (
+          <Button variant="secondary" size="sm" onClick={handleDelete} loading={deleteMutation.isPending}>
+            <Trash2 size={14} /> Delete event
+          </Button>
+        )}
+      </div>
 
       <Card>
         {event.imageUrl && <img src={event.imageUrl} alt="" className="mb-4 h-40 w-full rounded-xl object-cover" />}

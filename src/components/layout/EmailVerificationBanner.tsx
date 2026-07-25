@@ -52,7 +52,7 @@ export function EmailVerificationBanner() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
         <Mail size={16} className="shrink-0 text-amber-600" />
         <p className="text-sm text-amber-800">
-          Verify your email <strong>{user.email}</strong> — you can't publish a project, a "looking for team" post,
+          Verify your email <strong>{user.email}</strong> - you can't publish a project, a "looking for team" post,
           or an application until you do.
         </p>
         <div className="ml-auto flex items-center gap-2">
@@ -63,9 +63,9 @@ export function EmailVerificationBanner() {
             Resend email
           </Button>
         </div>
-        {justSent && <p className="w-full text-xs text-amber-700">Email sent — check your inbox (and spam folder).</p>}
+        {justSent && <p className="w-full text-xs text-amber-700">Email sent - check your inbox (and spam folder).</p>}
         {stillUnverified && (
-          <p className="w-full text-xs text-amber-700">Still not seeing it as verified — click the link in the email and try again.</p>
+          <p className="w-full text-xs text-amber-700">Still not seeing it as verified - click the link in the email and try again.</p>
         )}
       </div>
     </div>

@@ -54,7 +54,7 @@ export function DeadlineWidget() {
             <div className="mt-1 space-y-1">
               {soonEvents.slice(0, 3).map((ev) => (
                 <Link key={ev.id} to={`/events/${ev.id}`} className="block text-xs text-surface-600 hover:text-accent-700">
-                  {ev.title} — {formatDeadline(ev.date)}
+                  {ev.title} - {formatDeadline(ev.date)}
                 </Link>
               ))}
             </div>

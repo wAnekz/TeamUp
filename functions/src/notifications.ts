@@ -134,7 +134,7 @@ export function emailShell(bodyHtml: string) {
       </p>
       ${bodyHtml}
       <p style="margin-top: 32px; font-size: 12px; color: #71717A;">
-        You're getting this because of activity on your TeamUp account. This is a transactional email — there's no
+        You're getting this because of activity on your TeamUp account. This is a transactional email - there's no
         unsubscribe, but you also won't get anything except updates directly about you.
       </p>
     </div>
@@ -207,7 +207,7 @@ export const notifyApplicationDecision = onDocumentUpdated(
           accepted
             ? `
               <p style="font-size: 15px; line-height: 1.5;">
-                Good news — you were accepted for <strong>${escapeHtml(after.roleTitle)}</strong> on
+                Good news - you were accepted for <strong>${escapeHtml(after.roleTitle)}</strong> on
                 "<strong>${escapeHtml(after.projectTitle)}</strong>". The team's contact info and chat are now
                 unlocked on your dashboard.
               </p>
@@ -220,7 +220,7 @@ export const notifyApplicationDecision = onDocumentUpdated(
             : `
               <p style="font-size: 15px; line-height: 1.5;">
                 Your application for <strong>${escapeHtml(after.roleTitle)}</strong> on
-                "<strong>${escapeHtml(after.projectTitle)}</strong>" wasn't accepted this time. Don't worry — there
+                "<strong>${escapeHtml(after.projectTitle)}</strong>" wasn't accepted this time. Don't worry - there
                 are always new projects posting on TeamUp.
               </p>
               <p style="margin-top: 20px;">

@@ -36,7 +36,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
     // Confirm before blocking, same pattern as the moderator "ban" action
     // in Reports.tsx — this hides them everywhere you'd see their
     // messages, so worth a beat before committing to it.
-    if (confirm(`Hide messages from ${authorName}? You can undo this any time — they won't be notified.`)) {
+    if (confirm(`Hide messages from ${authorName}? You can undo this any time - they won't be notified.`)) {
       blockUser(user.uid, authorId);
     }
   };
@@ -87,7 +87,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
         <div className="max-h-96 min-h-[220px] space-y-3 overflow-y-auto p-4">
           {error && (
             <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-              <p>Couldn't load chat — you may no longer have access to this team's messages.</p>
+              <p>Couldn't load chat - you may no longer have access to this team's messages.</p>
               <button type="button" onClick={() => window.location.reload()} className="mt-1 font-medium underline">
                 Reload
               </button>
@@ -100,7 +100,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
             </div>
           )}
           {!loading && !error && messages.length === 0 && hiddenCount === 0 && (
-            <p className="text-center text-sm text-surface-400">No messages yet — say hi to your team.</p>
+            <p className="text-center text-sm text-surface-400">No messages yet - say hi to your team.</p>
           )}
           {hiddenCount > 0 && (
             <button
@@ -110,7 +110,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
             >
               {showBlocked
                 ? 'Hide messages from blocked users again'
-                : `${hiddenCount} message${hiddenCount === 1 ? '' : 's'} hidden from users you blocked — show`}
+                : `${hiddenCount} message${hiddenCount === 1 ? '' : 's'} hidden from users you blocked - show`}
             </button>
           )}
           {messages.map((m) => {
@@ -150,7 +150,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
         </div>
         {sendError && (
           <p className="border-t border-surface-100 bg-red-50 px-4 py-1.5 text-xs text-red-600">
-            Message didn't send — check your connection and try again.
+            Message didn't send - check your connection and try again.
           </p>
         )}
         <div className="flex items-center gap-2 border-t border-surface-100 p-3">

@@ -67,7 +67,7 @@ const users = [
 const projects = [
   {
     id: 'seed_project_hackathon',
-    title: 'AI Study Buddy — Almaty AI Hackathon',
+    title: 'AI Study Buddy - Almaty AI Hackathon',
     description:
       'Building an AI tutor that generates practice problems from a photo of your homework. Looking for a backend dev and a designer before the hackathon deadline.',
     type: 'event',
@@ -92,7 +92,7 @@ const projects = [
     id: 'seed_project_ongoing',
     title: 'Campus Events App',
     description:
-      'An ongoing project to build a mobile app listing school and city events for teens. No fixed deadline — join whenever.',
+      'An ongoing project to build a mobile app listing school and city events for teens. No fixed deadline - join whenever.',
     type: 'ongoing',
     roles: [
       { id: 'role_1', title: 'Flutter Developer', requiredSkills: ['Flutter'], slotsTotal: 2, slotsFilled: 1 },

@@ -36,7 +36,7 @@ export default function ModerationReports() {
     <div className="mx-auto max-w-2xl space-y-4">
       <h1 className="text-xl font-bold text-surface-900">Open reports</h1>
       {isLoading && <Skeleton className="h-24" />}
-      {!isLoading && reports?.length === 0 && <p className="text-sm text-surface-500">Nothing open — you're caught up.</p>}
+      {!isLoading && reports?.length === 0 && <p className="text-sm text-surface-500">Nothing open - you're caught up.</p>}
       {reports?.map((r) => (
         <ReportCard
           key={r.id}
