@@ -83,7 +83,7 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         '**Данные аккаунта:** email, пароль (хранится в зашифрованном виде Firebase Authentication, мы его не видим).',
         '**Данные профиля:** имя, возраст, класс, город, школа (по желанию, выбирается из общего справочника или добавляется вами), фото профиля, навыки, интересы, короткое био.',
-        '**Контактные данные (по желанию):** телеграм, GitHub, портфолио, Instagram — вы указываете их сами. Указывайте только то, чем готовы поделиться с другими участниками (см. п. 6).',
+        '**Контактные данные (по желанию):** телеграм, GitHub, портфолио, Instagram — вы указываете их сами. Они видны только вам и участникам ваших команд (см. п. 6).',
         '**Достижения (по желанию):** название, результат, дата, описание, ссылка и прикреплённый файл (фото диплома или PDF-сертификат). На файле может быть ваше ФИО и школа — загружайте только то, что готовы показать.',
         '**Данные об активности:** время последнего входа, созданные проекты и их итоги, заявки, приглашения в команды, отметки «Мне интересно» у событий, сообщения в командных чатах, поданные жалобы.',
         '**Игровые данные:** очки опыта (XP), уровень и значки. Они начисляются автоматически за подтверждённые действия (например, когда вас приняли в команду) и используются для сезонного рейтинга школ.',
@@ -125,8 +125,9 @@ const CONTENT: Record<Lang, Section[]> = {
     {
       heading: '6. Кто видит ваши данные',
       list: [
-        '**Имя, город, класс, школа, аватар, био, навыки, интересы, контакты, достижения (включая прикреплённые файлы), команды, в которых вы состоите, уровень и значки** - видны всем зарегистрированным пользователям (профили открыты по замыслу сервиса).',
+        '**Имя, город, класс, школа, аватар, био, навыки, интересы, достижения (включая прикреплённые файлы), команды, в которых вы состоите, уровень и значки** - видны всем зарегистрированным пользователям (профили открыты по замыслу сервиса).',
         '**Посетители без аккаунта** видят только события, рейтинг школ (суммарные очки школ) и обезличенные карточки проектов — название, описание, роли, нужные навыки и итог команды, **без имён, фото и состава команды**. Профили им недоступны.',
+        '**Контакты (телеграм и т.д.)** - видны только вам и тем, с кем вы в одной команде: лидеру и участникам общих проектов. Доступ открывается автоматически, когда вас принимают в команду (или вы принимаете кого-то), и закрывается, если общих команд больше нет.',
         '**Email** - виден только вам самим. Другим пользователям он не показывается и не передаётся через интерфейс.',
         '**Сообщения в командном чате** - видны только участникам конкретной команды.',
         '**Отметка «Мне интересно»** у события - ваше имя и фото видны зарегистрированным пользователям в списке интересующихся, чтобы можно было найти команду.',
@@ -181,7 +182,7 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         '**Account data:** email, password (stored encrypted by Firebase Authentication — we never see it).',
         '**Profile data:** name, age, grade, city, school (optional; picked from a shared directory or added by you), profile photo, skills, interests, short bio.',
-        '**Contact details (optional):** Telegram, GitHub, portfolio, Instagram — you provide these yourself. Only add what you are comfortable sharing with other members (see section 6).',
+        '**Contact details (optional):** Telegram, GitHub, portfolio, Instagram — you provide these yourself. They are visible only to you and the people on your teams (see section 6).',
         '**Achievements (optional):** title, result, date, description, link and an attached file (a photo of a diploma or a PDF certificate). A file may show your full name and school — only upload what you are happy to show.',
         '**Activity data:** last active time, created projects and their results, applications, team invites, "interested" marks on events, messages in team chats, submitted reports.',
         '**Game data:** experience points (XP), level and badges. Granted automatically for confirmed actions (e.g. being accepted onto a team) and used for the seasonal school leaderboard.',
@@ -221,8 +222,9 @@ const CONTENT: Record<Lang, Section[]> = {
     {
       heading: '6. Who sees your data',
       list: [
-        '**Name, city, grade, school, avatar, bio, skills, interests, contacts, achievements (including attached files), the teams you are on, level and badges** - visible to all registered users (profiles are open by design).',
+        '**Name, city, grade, school, avatar, bio, skills, interests, achievements (including attached files), the teams you are on, level and badges** - visible to all registered users (profiles are open by design).',
         '**Visitors without an account** only see events, the school leaderboard (school point totals) and anonymized project cards — title, description, roles, required skills and the team result, **with no names, photos or team members**. Profiles are not available to them.',
+        '**Contacts (Telegram, etc.)** - visible only to you and the people you share a team with: the lead and members of any common project. Access opens automatically when you are accepted onto a team (or accept someone) and closes when you no longer share a team.',
         '**Email** - visible only to you. It is never shown to other users or exposed through the interface.',
         "**Team chat messages** - visible only to that team's members.",
         '**An "interested" mark** on an event - your name and photo are visible to registered users in the list of interested people, so teams can find each other.',
@@ -277,7 +279,7 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         '**Аккаунт деректері:** email, құпия сөз (Firebase Authentication шифрланған түрде сақтайды, біз оны көрмейміз).',
         '**Профиль деректері:** аты-жөні, жасы, сынып, қала, мектеп (қалауыңызша; ортақ анықтамалықтан таңдалады немесе өзіңіз қосасыз), профиль фотосы, дағдылар, қызығушылықтар, қысқаша био.',
-        '**Байланыс деректері (қалауыңызша):** telegram, GitHub, портфолио, Instagram — оларды өзіңіз көрсетесіз. Басқа қатысушылармен бөлісуге дайын нәрсені ғана көрсетіңіз (6-бөлімді қараңыз).',
+        '**Байланыс деректері (қалауыңызша):** telegram, GitHub, портфолио, Instagram — оларды өзіңіз көрсетесіз. Олар тек өзіңізге және командаларыңыздың мүшелеріне көрінеді (6-бөлімді қараңыз).',
         '**Жетістіктер (қалауыңызша):** атауы, нәтижесі, күні, сипаттамасы, сілтеме және тіркелген файл (диплом фотосы немесе PDF-сертификат). Файлда аты-жөніңіз бен мектебіңіз болуы мүмкін — көрсетуге дайын нәрсені ғана жүктеңіз.',
         '**Белсенділік деректері:** соңғы кіру уақыты, құрылған жобалар мен олардың нәтижелері, өтінімдер, командаға шақырулар, іс-шаралардағы «Маған қызық» белгілері, команда чатындағы хабарламалар, жіберілген шағымдар.',
         '**Ойын деректері:** тәжірибе ұпайлары (XP), деңгей және белгілер. Расталған әрекеттер үшін автоматты түрде беріледі (мысалы, сізді командаға қабылдағанда) және мектептердің маусымдық рейтингінде қолданылады.',
@@ -319,8 +321,9 @@ const CONTENT: Record<Lang, Section[]> = {
     {
       heading: '6. Деректеріңізді кім көреді',
       list: [
-        '**Аты-жөні, қала, сынып, мектеп, аватар, био, дағдылар, қызығушылықтар, байланыстар, жетістіктер (тіркелген файлдарды қоса), сіз мүше командалар, деңгей мен белгілер** - барлық тіркелген пайдаланушыларға көрінеді (профильдер қызметтің тұжырымдамасы бойынша ашық).',
+        '**Аты-жөні, қала, сынып, мектеп, аватар, био, дағдылар, қызығушылықтар, жетістіктер (тіркелген файлдарды қоса), сіз мүше командалар, деңгей мен белгілер** - барлық тіркелген пайдаланушыларға көрінеді (профильдер қызметтің тұжырымдамасы бойынша ашық).',
         '**Аккаунтсыз келушілер** тек іс-шараларды, мектептер рейтингін (мектептердің жиынтық ұпайлары) және иесіздендірілген жоба карточкаларын көреді — атауы, сипаттамасы, рөлдері, қажетті дағдылар және команда нәтижесі, **аттарсыз, фотосыз және команда құрамынсыз**. Профильдер оларға қолжетімсіз.',
+        '**Байланыстар (telegram және т.б.)** - тек өзіңізге және сізбен бір командадағыларға көрінеді: ортақ жобалардың жетекшісі мен қатысушыларына. Сізді командаға қабылдағанда (немесе сіз біреуді қабылдағанда) қолжетімділік автоматты түрде ашылады, ал ортақ команда қалмаса жабылады.',
         '**Email** - тек өзіңізге көрінеді. Басқа пайдаланушыларға көрсетілмейді және интерфейс арқылы берілмейді.',
         '**Команда чатындағы хабарламалар** - тек сол команданың қатысушыларына көрінеді.',
         '**Іс-шарадағы «Маған қызық» белгісі** - команда табу үшін атыңыз бен фотоңыз қызығушылық танытқандар тізімінде тіркелген пайдаланушыларға көрінеді.',

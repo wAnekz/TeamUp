@@ -17,7 +17,8 @@ import { SchoolPicker } from '@/components/profile/SchoolPicker';
 import { XpCard } from '@/components/gamification/Gamification';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { interestLabel, skillLabel, useT } from '@/i18n';
-import { useUpdateProfile, uploadAvatar } from '@/hooks/useProfile';
+import { saveContacts, useUpdateProfile, uploadAvatar } from '@/hooks/useProfile';
+import { deleteField } from 'firebase/firestore';
 import { useNotifications } from '@/hooks/useNotifications';
 import { lastActiveLabel } from '@/utils/dates';
 import { computeProfileCompleteness } from '@/utils/profileCompleteness';
@@ -144,12 +145,14 @@ export default function MyProfile() {
         bio: values.bio || '',
         skills: values.skills,
         interests: values.interests,
-        contacts: {
-          telegram: values.telegram || null,
-          github: values.github || null,
-          portfolio: values.portfolio || null,
-          instagram: values.instagram || null,
-        },
+        // Removes the legacy public copy; the real one is private/contacts.
+        contacts: deleteField() as unknown as undefined,
+      });
+      await saveContacts(user.uid, {
+        telegram: values.telegram || null,
+        github: values.github || null,
+        portfolio: values.portfolio || null,
+        instagram: values.instagram || null,
       });
       await refreshProfile();
       setEditing(false);

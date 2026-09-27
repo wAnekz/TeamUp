@@ -35,22 +35,30 @@ service cloud.firestore {
     // ---------------- users ----------------
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId);
+      allow create: if isOwner(userId) && !('contacts' in request.resource.data);
       allow update: if (isOwner(userId)
         && request.resource.data.uid == userId
-        && !('email' in request.resource.data))
+        && !('email' in request.resource.data)
+        // Contacts moved to private/contacts: they may be removed from the
+        // public profile (migration) but never added or changed here.
+        && (!('contacts' in request.resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['contacts'])))
         || (isModerator() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['banned', 'updatedAt']));
       allow delete: if false;
     }
 
     match /users/{userId}/private/{docId} {
-      allow read: if isOwner(userId);
+      // private/contacts is also readable by the student's teammates —
+      // `visibleTo` is maintained by functions/src/contacts.ts only.
+      allow read: if isOwner(userId)
+        || (docId == 'contacts' && isSignedIn() && request.auth.uid in resource.data.get('visibleTo', []));
       // private/telegram is written by the bot webhook (Admin SDK) only.
       // The owner may disconnect (chatId → null) or toggle the digest, but
       // never point it at a chat id of their choosing — that would let
       // someone aim the bot's messages at another person's chat.
-      allow create: if isOwner(userId) && docId != 'telegram';
+      allow create: if isOwner(userId) && docId != 'telegram'
+        && (docId != 'contacts' || request.resource.data.keys().hasOnly(['contacts']));
       allow update: if isOwner(userId)
+        && (docId != 'contacts' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contacts']))
         && (docId != 'telegram'
             || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chatId', 'digest'])
                 && (request.resource.data.chatId == null || request.resource.data.chatId == resource.data.chatId)));

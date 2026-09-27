@@ -15,7 +15,7 @@ import { interestLabel, skillLabel, useT } from '@/i18n';
 import { useApplyToRole, useProjectApplications, useReviewApplication } from '@/hooks/useApplications';
 import { useDeleteProject, useIncrementProjectView, useProject, useUpdateProject } from '@/hooks/useProjects';
 import { useSavedProjectIds, useToggleSaveProject } from '@/hooks/useSavedProjects';
-import { usePublicProfile } from '@/hooks/useProfile';
+import { useContacts } from '@/hooks/useProfile';
 import { ContactLinks } from '@/components/profile/ContactLinks';
 import { ReportButton } from '@/components/ReportButton';
 import { formatDeadline, isDeadlinePassed, timeAgo } from '@/utils/dates';
@@ -405,8 +405,8 @@ export default function ProjectDetail() {
 /** Small subcomponent so hooks (usePublicProfile) can run once per accepted
  *  applicant inside the .map() above without breaking the rules of hooks. */
 function AcceptedContact({ uid }: { uid: string }) {
-  const { data: profile, isLoading } = usePublicProfile(uid);
+  const { data: contacts, isLoading } = useContacts(uid);
   const t = useT();
   if (isLoading) return <p className="text-xs text-surface-400">{t.project.loadingContacts}</p>;
-  return <ContactLinks contacts={profile?.contacts} />;
+  return <ContactLinks contacts={contacts ?? undefined} />;
 }

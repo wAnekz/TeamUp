@@ -62,7 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         email = null;
       }
-      setProfile({ ...(snap.data() as UserProfile), email });
+      // Contacts moved to users/{uid}/private/contacts (teammates-only);
+      // fall back to the legacy field until the server has migrated it.
+      let contacts = (snap.data() as UserProfile).contacts;
+      try {
+        const contactsSnap = await getDoc(doc(db, 'users', uid, 'private', 'contacts'));
+        contacts = (contactsSnap.data()?.contacts as UserProfile['contacts']) ?? contacts;
+      } catch {
+        // keep legacy/undefined
+      }
+      setProfile({ ...(snap.data() as UserProfile), email, contacts });
     } catch {
       // Main profile read failed (e.g. rules mid-deploy, offline). Don't
       // leave `profile` in a stale state, but let auth resolution proceed —

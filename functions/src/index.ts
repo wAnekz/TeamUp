@@ -14,3 +14,4 @@ export { syncPublicProject, reconcilePublicProjects } from './publicProjects';
 export { nudgeInactiveUsers } from './reengagement';
 export { syncTeamResult } from './teamResults';
 export { computeMetrics } from './metrics';
+export { syncContactVisibility, reconcileContacts } from './contacts';

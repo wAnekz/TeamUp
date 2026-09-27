@@ -9,6 +9,7 @@ import {
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -48,11 +49,13 @@ beforeEach(async () => {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
     const user = (uid: string) => ({ uid, name: uid, profileComplete: true, skills: [], interests: [], verified: false });
-    await setDoc(doc(db, 'users/alice'), { ...user('alice'), contacts: { telegram: '@alice' } });
+    await setDoc(doc(db, 'users/alice'), user('alice'));
+    await setDoc(doc(db, 'users/legacy'), { ...user('legacy'), contacts: { telegram: '@old' } });
     await setDoc(doc(db, 'users/bob'), user('bob'));
     await setDoc(doc(db, 'users/newbie'), { uid: 'newbie', profileComplete: false });
     await setDoc(doc(db, 'users/alice/private/info'), { email: 'alice@example.com' });
     await setDoc(doc(db, 'users/alice/private/telegram'), { chatId: 111, digest: true });
+    await setDoc(doc(db, 'users/alice/private/contacts'), { contacts: { telegram: '@alice' }, visibleTo: ['carol'] });
     await setDoc(doc(db, 'config/moderators'), { uids: ['mod'] });
     await setDoc(doc(db, 'users/mod'), user('mod'));
     await setDoc(doc(db, 'projects/p1'), {
@@ -119,6 +122,28 @@ describe('private data', () => {
     await assertFails(updateDoc(doc(as('bob'), 'users/alice'), { name: 'hacked' }));
     await assertFails(updateDoc(doc(as('bob'), 'users/alice'), { banned: true }));
     await assertSucceeds(updateDoc(doc(as('mod'), 'users/alice'), { banned: true, updatedAt: serverTimestamp() }));
+  });
+});
+
+describe('contacts', () => {
+  it('are readable only by the student and their teammates', async () => {
+    await assertSucceeds(getDoc(doc(as('alice'), 'users/alice/private/contacts')));
+    await assertSucceeds(getDoc(doc(as('carol'), 'users/alice/private/contacts'))); // shares a team
+    await assertFails(getDoc(doc(as('bob'), 'users/alice/private/contacts')));
+    await assertFails(getDoc(doc(guest(), 'users/alice/private/contacts')));
+  });
+
+  it('a student cannot grant themselves or others access', async () => {
+    await assertFails(updateDoc(doc(as('alice'), 'users/alice/private/contacts'), { visibleTo: ['bob'] }));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: {}, visibleTo: ['x'] }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: { telegram: '@bob' } }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'users/alice/private/contacts'), { contacts: { telegram: '@new' } }));
+  });
+
+  it('can no longer be put on the public profile, only removed from it', async () => {
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { contacts: { telegram: '@bob' } }));
+    await assertSucceeds(updateDoc(doc(as('legacy'), 'users/legacy'), { contacts: deleteField() }));
+    await assertSucceeds(updateDoc(doc(as('legacy'), 'users/legacy'), { name: 'Still works' }));
   });
 });
 

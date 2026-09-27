@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SchoolPicker } from '@/components/profile/SchoolPicker';
+import { saveContacts } from '@/hooks/useProfile';
 import { skillLabel, useT } from '@/i18n';
 import { Button } from '@/components/ui/Button';
 import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
@@ -66,6 +67,12 @@ export default function CompleteProfile() {
     if (!user) return;
     setServerError(null);
     try {
+      await saveContacts(user.uid, {
+        telegram: values.telegram || null,
+        github: values.github || null,
+        portfolio: values.portfolio || null,
+        instagram: values.instagram || null,
+      });
       await setDoc(
         doc(db, 'users', user.uid),
         {
@@ -79,12 +86,6 @@ export default function CompleteProfile() {
           bio: values.bio || '',
           skills: values.skills,
           interests: values.interests,
-          contacts: {
-            telegram: values.telegram || null,
-            github: values.github || null,
-            portfolio: values.portfolio || null,
-            instagram: values.instagram || null,
-          },
           isStudentConfirmed: true,
           verified: false,
           profileComplete: true,

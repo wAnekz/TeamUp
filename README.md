@@ -110,7 +110,8 @@ functions/
 
 ## Data model
 
-- **users/{uid}** - profile, skills, interests, contacts, `schoolId`. Readable by any signed-in user (never by guests). Contacts live here too, so any registered user can see them on a profile page - the privacy policy says so; moving them to an owner/teammate-only doc is listed under Known gaps.
+- **users/{uid}** - profile, skills, interests, `schoolId`. Readable by any signed-in user (never by guests).
+- **users/{uid}/private/contacts** - Telegram/GitHub/portfolio/Instagram. Readable only by the owner and uids in `visibleTo` (everyone they share a team with), which only `functions/src/contacts.ts` writes - recomputed on every team change plus a daily reconcile that also migrates legacy `users/{uid}.contacts`.
 - **users/{uid}/private/{docId}** - email lives here, in its own subdocument, not as a field on `users/{uid}`. `users/{uid}` is readable by any signed-in user by design; Firestore rules can't hide a single field from a whole-document read, so email can never safely live there. Restricted to the owner only - Cloud Functions read it fine regardless, since the Admin SDK bypasses rules.
 - **projects/{id}** - roles with slot counts, denormalized `teamSizeCurrent`/`teamSizeMax` so the feed doesn't need sub-reads.
 - **applications/{id}** - deterministic doc ID (`projectId_roleId_applicantId`) instead of `addDoc()` + a client-side existence check. A second attempt at the same ID is an `update`, which the rules reject - no race window, no reliance on the client behaving.
@@ -137,7 +138,6 @@ The userbase is 14–18, so this got more attention than a typical side project:
 ## Known gaps
 
 - No self-serve account deletion yet (manual request to the developer - see `PrivacyPolicy.tsx` §7)
-- Contacts (Telegram, Instagram...) are on the public-to-registered-users profile doc. For a 14-18 audience they should move to a doc readable only by the owner and their teammates
 - Kazakh translations (`src/i18n/kz.ts`) were not written by a native speaker and need a proofread
 - The signed-in app was verified by type checks, unit tests and rules tests, not by an end-to-end browser test
 

@@ -10,6 +10,7 @@ import { TeamsSection } from '@/components/profile/TeamsSection';
 import { AchievementsSection } from '@/components/profile/AchievementsSection';
 import { BadgesCard, LevelPill } from '@/components/gamification/Gamification';
 import { useAuth } from '@/contexts/AuthContext';
+import { useContacts } from '@/hooks/useProfile';
 import { interestLabel, skillLabel, useT } from '@/i18n';
 
 export default function UserProfile() {
@@ -56,7 +57,7 @@ export default function UserProfile() {
         {profile.bio && <p className="mt-4 whitespace-pre-wrap text-sm text-surface-700">{profile.bio}</p>}
         <div className="mt-4 border-t border-surface-100 pt-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-400">{t.contact}</p>
-          <ContactLinks contacts={profile.contacts} />
+          <ProfileContacts uid={profile.uid} />
         </div>
         <div className="mt-3 flex items-center justify-between gap-2 print:hidden">
           {/* Browser print → "Save as PDF" gives a clean one-file portfolio
@@ -102,4 +103,13 @@ export default function UserProfile() {
       )}
     </div>
   );
+}
+
+/** Teammates (and the student themselves) see the links; everyone else a note. */
+function ProfileContacts({ uid }: { uid: string }) {
+  const { data: contacts, isLoading } = useContacts(uid);
+  const t = useT().profile;
+  if (isLoading) return <Skeleton className="h-7 w-40" />;
+  if (!contacts) return <p className="text-xs text-surface-400">{t.contactsHidden}</p>;
+  return <ContactLinks contacts={contacts} />;
 }

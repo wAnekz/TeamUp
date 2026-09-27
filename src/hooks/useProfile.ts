@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import imageCompression from 'browser-image-compression';
 import { db } from '@/lib/firebase';
-import type { UserProfile } from '@/types';
+import type { UserContacts, UserProfile } from '@/types';
 import { getT } from '@/i18n';
 
 export function useUpdateProfile(uid: string | undefined) {
@@ -60,3 +60,29 @@ export async function uploadAvatar(_uid: string, file: File): Promise<string> {
   return data.data.url as string;
 }
 
+
+/**
+ * Contacts live in users/{uid}/private/contacts, readable only by the owner
+ * and people they share a team with (firestore.rules + functions/src/contacts.ts).
+ * Returns null — not an error — when the viewer isn't allowed to see them.
+ */
+export function useContacts(uid: string | undefined) {
+  return useQuery({
+    queryKey: ['contacts', uid],
+    enabled: !!uid,
+    retry: false,
+    queryFn: async (): Promise<UserContacts | null> => {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid!, 'private', 'contacts'));
+        return (snap.data()?.contacts as UserContacts | undefined) ?? null;
+      } catch {
+        return null; // permission-denied: not a teammate
+      }
+    },
+  });
+}
+
+export async function saveContacts(uid: string, contacts: UserContacts) {
+  // merge: never touch `visibleTo`, which only the server maintains.
+  await setDoc(doc(db, 'users', uid, 'private', 'contacts'), { contacts }, { merge: true });
+}

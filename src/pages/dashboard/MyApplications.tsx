@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMyApplications } from '@/hooks/useApplications';
-import { usePublicProfile } from '@/hooks/useProfile';
+import { useContacts } from '@/hooks/useProfile';
 import { ContactLinks } from '@/components/profile/ContactLinks';
 import { Card, Badge, Skeleton, ErrorState } from '@/components/ui/primitives';
 import { useT } from '@/i18n';
@@ -41,8 +41,8 @@ export default function MyApplications() {
 }
 
 function OwnerContact({ uid }: { uid: string }) {
-  const { data: profile, isLoading } = usePublicProfile(uid);
+  const { data: contacts, isLoading } = useContacts(uid);
   const t = useT();
   if (isLoading) return <p className="text-xs text-surface-400">{t.project.loadingContacts}</p>;
-  return <ContactLinks contacts={profile?.contacts} />;
+  return <ContactLinks contacts={contacts ?? undefined} />;
 }
