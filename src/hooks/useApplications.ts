@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, doc, runTransaction, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Application, Project } from '@/types';
+import { getT } from '@/i18n';
 
 function sortByCreatedAtDesc(items: Application[]) {
   return items.sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
@@ -52,7 +53,7 @@ export function useApplyToRole() {
     }) => {
       const { project, roleId, applicantId, applicantName, applicantAvatarUrl, message } = input;
       const role = project.roles.find((r) => r.id === roleId);
-      if (!role) throw new Error('Role not found');
+      if (!role) throw new Error(getT().errors.roleNotFound);
 
       // Deterministic doc id (`${projectId}_${roleId}_${applicantId}`) instead
       // of addDoc(). This makes duplicate prevention a server-side guarantee:
@@ -63,7 +64,7 @@ export function useApplyToRole() {
       const ref = doc(db, 'applications', `${project.id}_${roleId}_${applicantId}`);
       await runTransaction(db, async (tx) => {
         const existing = await tx.get(ref);
-        if (existing.exists()) throw new Error('You already applied to this role.');
+        if (existing.exists()) throw new Error(getT().errors.alreadyApplied);
         tx.set(ref, {
           projectId: project.id,
           projectTitle: project.title,
@@ -108,7 +109,7 @@ export function useReviewApplication() {
 
       await runTransaction(db, async (tx) => {
         const projectSnap = await tx.get(projectRef);
-        if (!projectSnap.exists()) throw new Error('Project no longer exists');
+        if (!projectSnap.exists()) throw new Error(getT().errors.projectGone);
         const project = projectSnap.data() as Project;
 
         if (decision === 'accepted') {
@@ -122,6 +123,7 @@ export function useReviewApplication() {
             roles,
             teamSizeCurrent,
             members: arrayUnion(application.applicantId),
+            [`memberRoles.${application.applicantId}`]: application.roleTitle,
             updatedAt: serverTimestamp(),
           });
         }

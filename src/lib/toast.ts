@@ -1,3 +1,5 @@
+import { getT } from '@/i18n';
+
 /**
  * Minimal toast system with no external dependency and no React context.
  * Plain pub/sub so it can be called from anywhere — including non-component
@@ -61,5 +63,5 @@ export function subscribeToasts(listener: Listener) {
 export function errorToMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'string') return error;
-  return 'Something went wrong. Please try again.';
+  return getT().common.somethingWrong;
 }

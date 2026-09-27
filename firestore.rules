@@ -45,9 +45,34 @@ service cloud.firestore {
 
     match /users/{userId}/private/{docId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      // private/telegram is written by the bot webhook (Admin SDK) only.
+      // The owner may disconnect (chatId → null) or toggle the digest, but
+      // never point it at a chat id of their choosing — that would let
+      // someone aim the bot's messages at another person's chat.
+      allow create: if isOwner(userId) && docId != 'telegram';
+      allow update: if isOwner(userId)
+        && (docId != 'telegram'
+            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chatId', 'digest'])
+                && (request.resource.data.chatId == null || request.resource.data.chatId == resource.data.chatId)));
       allow delete: if false;
+    }
+
+    // ---------------- achievements (portfolio) ----------------
+    // Public to signed-in users like the rest of the profile; files live in
+    // Storage under achievements/{uid}/ (see storage.rules).
+    match /users/{userId}/achievements/{achievementId} {
+      function validAchievement() {
+        let d = request.resource.data;
+        return d.uid == userId
+          && !('fromProjectId' in d) // team results are written by syncTeamResult only
+          && d.title is string && d.title.size() > 0 && d.title.size() <= 100
+          && d.type in ['hackathon', 'olympiad', 'certificate', 'project', 'other']
+          && (!('description' in d) || d.description == null || (d.description is string && d.description.size() <= 400))
+          && (!('result' in d) || d.result == null || (d.result is string && d.result.size() <= 60));
+      }
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(userId) && validAchievement();
+      allow delete: if isOwner(userId);
     }
 
     // ---------------- blocks (self-serve mute, client-side only) ----------------
@@ -63,6 +88,36 @@ service cloud.firestore {
       allow create: if isOwner(userId) && blockedUid != userId;
       allow update: if false;
       allow delete: if isOwner(userId);
+    }
+
+    // ---------------- schools directory ----------------
+    // Public list behind the SchoolPicker. Students can add a missing school
+    // (never marked verified, never overwrite an existing id — ids are
+    // derived from name + city, which is what dedupes simultaneous adds).
+    // Renames/merges are moderator-only.
+    match /schools/{schoolId} {
+      allow read: if true;
+      // isSignedIn, not hasCompletedProfile: the picker is used *during*
+      // profile completion, before profileComplete is true.
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.verified == false
+        && request.resource.data.keys().hasOnly(['name', 'city', 'key', 'aliases', 'verified', 'createdBy', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3 && request.resource.data.name.size() <= 100
+        && (request.resource.data.city == null || (request.resource.data.city is string && request.resource.data.city.size() <= 60))
+        && request.resource.data.aliases.size() == 0;
+      allow update, delete: if isModerator();
+    }
+
+    // ---------------- publicProjects (guest view) ----------------
+    // Anonymized mirror of published projects, written by the
+    // syncPublicProject function — no names, avatars or member ids, so
+    // signed-out visitors can browse without seeing anyone's identity
+    // (the privacy policy limits profiles to registered users).
+    match /publicProjects/{projectId} {
+      allow read: if true;
+      allow write: if false;
     }
 
     // ---------------- projects ----------------
@@ -117,6 +172,7 @@ service cloud.firestore {
         && request.resource.data.applicantId == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.ownerId != request.auth.uid
+        && !('viaInvite' in request.resource.data) // set only by joinByInvite
         && applicationId == request.resource.data.projectId + '_' + request.resource.data.roleId + '_' + request.resource.data.applicantId;
 
       allow update: if isSignedIn()
@@ -159,11 +215,93 @@ service cloud.firestore {
 
     // ---------------- events (curated hackathons/olympiads TeamUp promotes) ----------------
     match /events/{eventId} {
-      allow read: if isSignedIn();
+      // Public: events carry no personal data, and they're the main reason
+      // a signed-out visitor would look around before registering.
+      allow read: if true;
       allow create: if isModerator();
       allow update: if isModerator();
       allow delete: if isModerator();
     }
+
+    // ---------------- eventSubscriptions ("I'm interested") ----------------
+    // Readable by everyone signed in — it's the public "who's going" list.
+    // remindersSent is written by sendEventReminders only.
+    match /eventSubscriptions/{subId} {
+      allow read: if isSignedIn();
+      allow create: if hasCompletedProfile()
+        && request.resource.data.uid == request.auth.uid
+        && subId == request.auth.uid + '_' + request.resource.data.eventId
+        && request.resource.data.keys().hasOnly(['uid', 'eventId', 'userName', 'userAvatarUrl', 'lookingForTeam', 'createdAt'])
+        && request.resource.data.lookingForTeam is bool;
+      allow update: if isOwner(resource.data.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lookingForTeam'])
+        && request.resource.data.lookingForTeam is bool;
+      allow delete: if isOwner(resource.data.uid);
+    }
+
+    // ---------------- auto-collected event drafts ----------------
+    // Created by the collectEvents function; moderators approve/reject.
+    match /eventDrafts/{draftId} {
+      allow read: if isModerator();
+      allow update: if isModerator()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['approved', 'rejected'];
+      allow create, delete: if false;
+    }
+
+    match /eventSources/{docId} {
+      allow read, write: if isModerator();
+    }
+
+    // ---------------- invites ----------------
+    // invites/{code}: readable by anyone signed in who has the code (the
+    // code is the secret; there's no list query that would reveal them).
+    // Joining happens in the joinByInvite function, never client-side.
+    match /invites/{code} {
+      allow get: if true; // guests see which team invited them before signing up
+      allow list: if false;
+      allow create: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.active == true
+        && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.authorId == request.auth.uid;
+      allow update: if isOwner(resource.data.ownerId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active']);
+      allow delete: if false;
+    }
+
+    // ---------------- Telegram linking tokens ----------------
+    // One-time tokens the bot webhook exchanges for a chat link; the client
+    // can only create its own and never read one back.
+    match /telegramLinks/{token} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && token.size() >= 20;
+      allow read, update, delete: if false;
+    }
+
+    // ---------------- precomputed stats (school leaderboard) ----------------
+    match /stats/{docId} {
+      allow read: if true; // aggregate school rankings only
+      allow write: if false;
+    }
+
+    // ---------------- gamification (XP / levels / badges) ----------------
+    // Written only by Cloud Functions (functions/src/gamification.ts) —
+    // that's the whole point: XP can't be self-granted.
+    match /gamification/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Your own XP ledger ("Recent" on My Profile). Queries must filter by uid.
+    match /xpEvents/{eventId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // inviteCounters, sentInvites, collectorSeen: Admin SDK only — no rules
+    // means no client access.
 
     // ---------------- reports ----------------
     match /reports/{reportId} {

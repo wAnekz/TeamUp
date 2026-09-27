@@ -1,4 +1,4 @@
-import { SKILLS, INTERESTS, type Skill, type SkillLevel, type Interest, type EventFormat } from '@/types';
+import { SKILLS, INTERESTS, type Skill, type SkillLevel, type Interest, type EventFormat, type AchievementType } from '@/types';
 
 export const SKILL_OPTIONS: Skill[] = [...SKILLS];
 export const SKILL_LEVEL_OPTIONS: { value: SkillLevel; label: string }[] = [
@@ -116,3 +116,11 @@ export const PROJECT_TYPE_OPTIONS = [
   { value: 'event', label: 'Event (has a deadline)' },
   { value: 'ongoing', label: 'Ongoing' },
 ] as const;
+
+export const ACHIEVEMENT_TYPE_OPTIONS: { value: AchievementType; label: string }[] = [
+  { value: 'hackathon', label: 'Hackathon' },
+  { value: 'olympiad', label: 'Olympiad' },
+  { value: 'certificate', label: 'Certificate / course' },
+  { value: 'project', label: 'Project' },
+  { value: 'other', label: 'Other' },
+];

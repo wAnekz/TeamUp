@@ -1,7 +1,8 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { RequireAuth, RequireGuest } from '@/components/layout/guards';
+import { AllowGuest, RequireAuth, RequireGuest } from '@/components/layout/guards';
+import { useAuth } from '@/contexts/AuthContext';
 import Login from '@/pages/Login';
 import NotFound from '@/pages/NotFound';
 
@@ -21,6 +22,11 @@ const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const UserProfile = lazy(() => import('@/pages/UserProfile'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const ModerationReports = lazy(() => import('@/pages/moderation/Reports'));
+const ModerationEventDrafts = lazy(() => import('@/pages/moderation/EventDrafts'));
+const ModerationStats = lazy(() => import('@/pages/moderation/Stats'));
+const InvitePage = lazy(() => import('@/pages/InvitePage'));
+const Schools = lazy(() => import('@/pages/Schools'));
+const Home = lazy(() => import('@/pages/Home'));
 
 // Small inline spinner instead of a full-screen one: this sits *inside*
 // AppShell (which is not lazy), so the navbar/footer stay mounted and only
@@ -38,6 +44,35 @@ function RouteLoader() {
 // next chunk loads — only ever the incoming page's own slot shows a spinner.
 function Page({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteLoader />}>{children}</Suspense>;
+}
+
+// Signed-in pages: account required, redirects to login (and back after).
+function Private({ children }: { children: ReactNode }) {
+  return (
+    <RequireAuth>
+      <AppShell>
+        <Page>{children}</Page>
+      </AppShell>
+    </RequireAuth>
+  );
+}
+
+// Browsable without an account — guests get the anonymized/public data and
+// sign-up prompts on any action (see useAuthGate).
+function Public({ children }: { children: ReactNode }) {
+  return (
+    <AllowGuest>
+      <AppShell>
+        <Page>{children}</Page>
+      </AppShell>
+    </AllowGuest>
+  );
+}
+
+// "/" is the landing page for visitors and the feed for everyone signed in.
+function HomeOrFeed() {
+  const { user } = useAuth();
+  return user ? <Feed /> : <Home />;
 }
 
 export default function App() {
@@ -61,144 +96,27 @@ export default function App() {
           </RequireAuth>
         }
       />
-      <Route
-        path="/feed"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <Feed />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/projects/new"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <CreateProject />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/projects/:id"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <ProjectDetail />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/projects/:id/edit"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <CreateProject />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/users/:id"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <UserProfile />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/events"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <Events />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/events/:id"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <EventDetail />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/looking-for-team"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <LookingForTeam />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <Dashboard />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/moderation/reports"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <ModerationReports />
-              </Page>
-            </AppShell>
-          </RequireAuth>
-        }
-      />
+      <Route path="/" element={<Public><HomeOrFeed /></Public>} />
+      <Route path="/feed" element={<Public><Feed /></Public>} />
+      <Route path="/projects/new" element={<Private><CreateProject /></Private>} />
+      <Route path="/projects/:id" element={<Public><ProjectDetail /></Public>} />
+      <Route path="/projects/:id/edit" element={<Private><CreateProject /></Private>} />
+      <Route path="/users/:id" element={<Private><UserProfile /></Private>} />
+      <Route path="/events" element={<Public><Events /></Public>} />
+      <Route path="/events/:id" element={<Public><EventDetail /></Public>} />
+      <Route path="/schools" element={<Public><Schools /></Public>} />
+      <Route path="/invite/:code" element={<Public><InvitePage /></Public>} />
+      <Route path="/looking-for-team" element={<Private><LookingForTeam /></Private>} />
+      <Route path="/dashboard" element={<Private><Dashboard /></Private>} />
+      <Route path="/moderation/reports" element={<Private><ModerationReports /></Private>} />
+      <Route path="/moderation/events" element={<Private><ModerationEventDrafts /></Private>} />
+      <Route path="/moderation/stats" element={<Private><ModerationStats /></Private>} />
       <Route
         path="/privacy"
         element={
           <Page>
             <PrivacyPolicy />
           </Page>
-        }
-      />
-      <Route
-        path="/"
-        element={
-          <RequireAuth>
-            <AppShell>
-              <Page>
-                <Feed />
-              </Page>
-            </AppShell>
-          </RequireAuth>
         }
       />
       <Route path="*" element={<NotFound />} />

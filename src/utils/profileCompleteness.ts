@@ -1,4 +1,5 @@
 import type { UserProfile } from '@/types';
+import { getT } from '@/i18n';
 
 export interface ProfileCompleteness {
   percent: number;
@@ -11,14 +12,15 @@ export interface ProfileCompleteness {
 // to visibly move after one or two quick edits, not demand a perfect
 // profile.
 export function computeProfileCompleteness(profile: UserProfile): ProfileCompleteness {
+  const t = getT().profile.completeness;
   const checks: { label: string; done: boolean }[] = [
-    { label: 'Add a photo', done: !!profile.avatarUrl },
-    { label: 'Write a short bio', done: !!profile.bio && profile.bio.trim().length > 0 },
-    { label: 'Add your school', done: !!profile.school },
-    { label: 'Add at least 3 skills', done: profile.skills.length >= 3 },
-    { label: 'Add at least 3 interests', done: profile.interests.length >= 3 },
+    { label: t.photo, done: !!profile.avatarUrl },
+    { label: t.bio, done: !!profile.bio && profile.bio.trim().length > 0 },
+    { label: t.school, done: !!profile.school },
+    { label: t.skills, done: profile.skills.length >= 3 },
+    { label: t.interests, done: profile.interests.length >= 3 },
     {
-      label: 'Add a contact link (Telegram, GitHub...)',
+      label: t.contact,
       done: !!(
         profile.contacts?.telegram ||
         profile.contacts?.github ||

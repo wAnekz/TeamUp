@@ -189,7 +189,11 @@ export interface UserProfile {
   age: number;
   grade: Grade;
   city: string;
-  school?: string | null;
+  school?: string | null; // display name, copied from schools/{schoolId}
+  // Picked from the shared schools directory (SchoolPicker) so the same
+  // school isn't spelled five ways on the leaderboard. Older profiles only
+  // have free-text `school`; functions/src/schools.ts links those daily.
+  schoolId?: string | null;
   avatarUrl?: string;
   bio?: string; // max 200 chars
   skills: UserSkill[];
@@ -228,6 +232,14 @@ export interface ProjectRole {
   slotsFilled: number;
 }
 
+export interface ProjectResult {
+  text: string; // "2nd place", "Finalist", "Participated"
+  eventName: string;
+  date?: Timestamp | null;
+  link?: string | null;
+  recordedAt?: Timestamp;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -241,6 +253,16 @@ export interface Project {
   interests: Interest[];
   skills: Skill[]; // denormalized union of roles[].requiredSkills, kept in sync by useCreateProject/useUpdateProject — powers the feed's skills filter
   members: string[]; // uids of accepted applicants, denormalized by useReviewApplication — powers team-chat access without querying `applications` from security rules
+  // uid → role title, written alongside `members` on accept (and by the
+  // joinByInvite function). Lets a public profile show "Backend @ Project X"
+  // without reading `applications`, which only the applicant/owner can.
+  // Optional: projects accepted before this field existed just omit the role.
+  memberRoles?: Record<string, string>;
+  // Set when the owner generates a team invite link — see invites/{code}.
+  inviteCode?: string | null;
+  // Recorded by the team lead after the event; functions/src/teamResults.ts
+  // copies it into every member's achievements as a team-confirmed entry.
+  result?: ProjectResult | null;
   status: ProjectStatus;
   authorId: string;
   authorName: string;
@@ -331,9 +353,162 @@ export interface EventItem {
   prizePool?: string | null; // free text, e.g. "500 000 KZT" or "Internship offers" — amounts/formats vary too much for a number field
   teamSizeHint?: string | null; // free text, e.g. "Teams of 2-4" — the event's own rules, distinct from any TeamUp project's roles
   imageUrl?: string | null;
+  // Prep material moderators attach: past winners, guides, rules docs.
+  resources?: EventResource[];
+  // Denormalized by the onEventSubscription* functions — events are
+  // moderator-write-only, so clients can't bump this themselves.
+  interestedCount?: number;
+  // Where an auto-collected event came from (see functions/src/eventCollector.ts).
+  sourceUrl?: string | null;
   isActive: boolean; // moderators can hide a past event without deleting it
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface EventResource {
+  title: string;
+  url: string;
+}
+
+// eventSubscriptions/{uid}_{eventId} — "I'm interested" on an event. Doubles
+// as the public "who's going" list on the event page (name/avatar are
+// denormalized for that) and as the recipient list for deadline reminders.
+export interface EventSubscription {
+  id: string;
+  uid: string;
+  eventId: string;
+  userName: string;
+  userAvatarUrl?: string | null;
+  lookingForTeam: boolean;
+  createdAt: Timestamp;
+}
+
+// eventDrafts/{id} — written only by the collectEvents scheduled function,
+// reviewed on /moderation/events. Approving copies it into `events`.
+export type EventDraftStatus = 'pending' | 'approved' | 'rejected';
+
+export interface EventDraft {
+  id: string;
+  source: 'devpost' | 'telegram';
+  sourceUrl: string;
+  sourceText?: string | null;
+  title: string;
+  description: string;
+  date?: Timestamp | null;
+  registrationDeadline?: Timestamp | null;
+  format?: EventFormat;
+  location?: string | null;
+  organizer?: string | null;
+  registrationUrl?: string | null;
+  prizePool?: string | null;
+  imageUrl?: string | null;
+  forSchoolStudents?: boolean | null;
+  status: EventDraftStatus;
+  createdAt: Timestamp;
+}
+
+// ---------- Achievements (portfolio) ----------
+
+export type AchievementType = 'hackathon' | 'olympiad' | 'certificate' | 'project' | 'other';
+
+// users/{uid}/achievements/{id}. `fileUrl` points at Firebase Storage
+// (achievements/{uid}/...) — a scan of a diploma, certificate PDF, photo.
+export interface Achievement {
+  id: string;
+  uid: string;
+  title: string;
+  type: AchievementType;
+  result?: string | null; // "1st place", "Finalist", "Gold medal"
+  date?: Timestamp | null;
+  description?: string | null;
+  link?: string | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  storagePath?: string | null;
+  // Present on entries created from a team result (id "team_<projectId>"):
+  // confirmed by the team lead, not self-reported — so not editable here.
+  fromProjectId?: string | null;
+  role?: string | null;
+  createdAt: Timestamp;
+}
+
+// ---------- Invites ----------
+
+// invites/{code} — one per project, created by the owner. Anyone with the
+// code can join an open role through the joinByInvite callable function.
+export interface Invite {
+  code: string;
+  projectId: string;
+  projectTitle: string;
+  ownerId: string;
+  active: boolean;
+  createdAt: Timestamp;
+}
+
+// ---------- Schools directory ----------
+
+// schools/{id}. Seeded with well-known schools, then grown by students
+// adding their own (verified: false). id = schoolDocId(name, city).
+export interface SchoolItem {
+  id: string;
+  name: string;
+  city?: string | null;
+  key: string; // normalizeSchool(name)
+  aliases?: string[];
+  verified?: boolean;
+}
+
+// ---------- School leaderboard ----------
+
+export interface SchoolStat {
+  key: string; // schools/{id} doc id, matched against profile.schoolId
+  name: string; // most common spelling
+  city?: string | null;
+  students: number;
+  active: number; // students who earned XP this season
+  score: number; // sum of students' season XP
+  totalXp: number;
+}
+
+export interface SchoolStats {
+  season: string; // "2026-Q3"
+  schools: SchoolStat[];
+  updatedAt: Timestamp;
+}
+
+export interface SeasonChampion {
+  season: string;
+  key: string;
+  name: string;
+  city?: string | null;
+  score: number;
+}
+
+// ---------- Gamification ----------
+
+// gamification/{uid} — written only by Cloud Functions (functions/src/gamification.ts).
+// Missing entirely for someone who hasn't earned anything yet.
+export interface Gamification {
+  uid: string;
+  xp?: number;
+  level?: number;
+  season?: string;
+  seasonXp?: number;
+  counters?: Partial<Record<string, number>>;
+  badges?: string[]; // ids from BADGES, plus "champion:<season>"
+}
+
+// xpEvents/{key} — the ledger behind the XP total, one per grant.
+export interface XpEvent {
+  id: string;
+  uid: string;
+  reason: string; // English log line; UI renders a translated one from the id prefix + subject
+  subject?: string | null;
+  points: number;
+  season: string;
+  newBadges?: string[];
+  createdAt: Timestamp;
 }
 
 // ---------- Reports ----------

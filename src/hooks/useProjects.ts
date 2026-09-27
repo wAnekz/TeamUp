@@ -35,7 +35,14 @@ const FEED_POOL_CAP = 300;
  * filters alone are covered by Firestore's automatic indexes, so we fetch a
  * capped, unsorted pool here and do sorting/pagination/search in JS below.
  */
-function buildFeedQuery(filters: ProjectFilters) {
+// Signed-out visitors read the anonymized mirror (functions/src/publicProjects.ts)
+// — same shape minus names/avatars/members, so every card/detail component
+// works unchanged and just renders a generic author.
+function projectsCollection(guest: boolean) {
+  return collection(db, guest ? 'publicProjects' : 'projects');
+}
+
+function buildFeedQuery(filters: ProjectFilters, guest: boolean) {
   const constraints: QueryConstraint[] = [where('isDraft', '==', false), where('status', '==', 'open')];
   if (filters.type) constraints.push(where('type', '==', filters.type));
   if (filters.skills.length) constraints.push(where('skills', 'array-contains-any', filters.skills.slice(0, 10)));
@@ -43,15 +50,15 @@ function buildFeedQuery(filters: ProjectFilters) {
     constraints.push(where('interests', 'array-contains-any', filters.interests.slice(0, 10)));
   constraints.push(limit(FEED_POOL_CAP));
 
-  return query(collection(db, 'projects'), ...constraints);
+  return query(projectsCollection(guest), ...constraints);
 }
 
-export function useProjectFeed(filters: ProjectFilters) {
+export function useProjectFeed(filters: ProjectFilters, guest = false) {
   return useInfiniteQuery({
-    queryKey: ['projects', 'feed', filters],
+    queryKey: ['projects', 'feed', filters, guest],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
-      const snap = await getDocs(buildFeedQuery(filters));
+      const snap = await getDocs(buildFeedQuery(filters, guest));
       let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project);
 
       if (filters.search) {
@@ -76,13 +83,13 @@ export function useProjectFeed(filters: ProjectFilters) {
 }
 
 /** Wider, unfiltered pool of open projects used for client-side match scoring. */
-export function useRecommendationPool() {
+export function useRecommendationPool(guest = false) {
   return useQuery({
-    queryKey: ['projects', 'recommendationPool'],
+    queryKey: ['projects', 'recommendationPool', guest],
     queryFn: async () => {
       // Same reasoning as buildFeedQuery above: no orderBy server-side.
       const snap = await getDocs(
-        query(collection(db, 'projects'), where('isDraft', '==', false), where('status', '==', 'open'), limit(FEED_POOL_CAP)),
+        query(projectsCollection(guest), where('isDraft', '==', false), where('status', '==', 'open'), limit(FEED_POOL_CAP)),
       );
       return snap.docs
         .map((d) => ({ id: d.id, ...d.data() }) as Project)
@@ -128,12 +135,12 @@ export function useUpdateProject() {
   });
 }
 
-export function useProject(id: string | undefined) {
+export function useProject(id: string | undefined, guest = false) {
   return useQuery({
-    queryKey: ['projects', 'detail', id],
+    queryKey: ['projects', 'detail', id, guest],
     enabled: !!id,
     queryFn: async () => {
-      const snap = await getDoc(doc(db, 'projects', id!));
+      const snap = await getDoc(doc(db, guest ? 'publicProjects' : 'projects', id!));
       if (!snap.exists()) throw new Error('Project not found');
       return { id: snap.id, ...snap.data() } as Project;
     },
@@ -232,6 +239,27 @@ export function useUpcomingDeadlines(uid: string | undefined) {
           pendingApplications: pendingByProject.get(project.id) ?? 0,
         }))
         .sort((a, b) => a.daysLeft - b.daysLeft);
+    },
+  });
+}
+
+/**
+ * Projects someone was accepted onto (not ones they own) — the "Teams" part
+ * of a public profile. Every entry here went through the owner's accept
+ * step, so it doubles as confirmation that this person really was on the
+ * team. array-contains alone (drafts filtered in JS) so no composite index
+ * is needed.
+ */
+export function useMemberProjects(uid: string | undefined) {
+  return useQuery({
+    queryKey: ['projects', 'byMember', uid],
+    enabled: !!uid,
+    queryFn: async () => {
+      const snap = await getDocs(query(collection(db, 'projects'), where('members', 'array-contains', uid)));
+      return snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as Project)
+        .filter((p) => !p.isDraft)
+        .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
     },
   });
 }

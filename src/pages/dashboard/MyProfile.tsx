@@ -10,6 +10,13 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
 import { ContactLinks } from '@/components/profile/ContactLinks';
 import { FeedbackButton } from '@/components/FeedbackButton';
+import { AchievementsSection } from '@/components/profile/AchievementsSection';
+import { TeamsSection } from '@/components/profile/TeamsSection';
+import { TelegramSettingsRow } from '@/components/profile/TelegramSettingsRow';
+import { SchoolPicker } from '@/components/profile/SchoolPicker';
+import { XpCard } from '@/components/gamification/Gamification';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { interestLabel, skillLabel, useT } from '@/i18n';
 import { useUpdateProfile, uploadAvatar } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { lastActiveLabel } from '@/utils/dates';
@@ -23,6 +30,8 @@ export default function MyProfile() {
   const { user, profile, refreshProfile, signOut } = useAuth();
   const updateMutation = useUpdateProfile(user?.uid);
   const { status: pushStatus, enable: enablePush } = useNotifications(user?.uid);
+  const tAll = useT();
+  const t = tAll.profile;
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -43,6 +52,9 @@ export default function MyProfile() {
   const skills = watch('skills') ?? [];
   const interests = watch('interests') ?? [];
   const bio = watch('bio') ?? '';
+  const schoolId = watch('schoolId');
+  const schoolName = watch('school');
+  const formCity = watch('city');
 
   if (!profile) return null;
 
@@ -53,6 +65,7 @@ export default function MyProfile() {
       grade: profile.grade,
       city: profile.city,
       school: profile.school ?? '',
+      schoolId: profile.schoolId ?? '',
       bio: profile.bio ?? '',
       skills: profile.skills,
       interests: profile.interests,
@@ -127,6 +140,7 @@ export default function MyProfile() {
         grade: values.grade as Grade,
         city: values.city,
         school: values.school || null,
+        schoolId: values.schoolId || null,
         bio: values.bio || '',
         skills: values.skills,
         interests: values.interests,
@@ -140,7 +154,7 @@ export default function MyProfile() {
       await refreshProfile();
       setEditing(false);
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : 'Could not save your profile');
+      setServerError(e instanceof Error ? e.message : t.couldNotSave);
     }
   };
 
@@ -149,8 +163,8 @@ export default function MyProfile() {
       onClick={() => fileRef.current?.click()}
       className="group relative shrink-0 rounded-full"
       type="button"
-      aria-label="Change photo"
-      title="Change photo"
+      aria-label={t.changePhoto}
+      title={t.changePhoto}
     >
       <Avatar src={profile.avatarUrl} name={profile.name} size={72} />
       {/* Always-visible affordance so it's obvious the avatar is clickable,
@@ -173,47 +187,56 @@ export default function MyProfile() {
           <div className="flex items-center gap-4">
             {AvatarPicker}
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-surface-900">Edit profile</h2>
-              {uploading && <p className="text-xs text-surface-400">Uploading photo...</p>}
+              <h2 className="text-lg font-semibold text-surface-900">{t.editProfile}</h2>
+              {uploading && <p className="text-xs text-surface-400">{t.uploadingPhoto}</p>}
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4">
-            <Input label="Full name" {...register('name')} error={errors.name?.message} />
-            <Input label="Age" type="number" {...register('age')} error={errors.age?.message} />
+            <Input label={t.fullName} {...register('name')} error={errors.name?.message} />
+            <Input label={t.age} type="number" {...register('age')} error={errors.age?.message} />
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-surface-700">Grade</span>
+              <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.grade_}</span>
               <select
                 {...register('grade')}
                 className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
               >
                 {GRADE_OPTIONS.map((g) => (
                   <option key={g} value={g}>
-                    Grade {g}
+                    {t.grade(g)}
                   </option>
                 ))}
               </select>
             </label>
-            <Input label="City" placeholder="Almaty" {...register('city')} error={errors.city?.message} />
+            <Input label={t.city} placeholder="Алматы" {...register('city')} error={errors.city?.message} />
           </div>
 
           <div className="mt-4">
-            <Input label="School (optional)" {...register('school')} />
+            <SchoolPicker
+              uid={profile.uid}
+              city={formCity}
+              value={schoolId && schoolName ? { id: schoolId, name: schoolName } : null}
+              onChange={(s) => {
+                setValue('schoolId', s?.id ?? '');
+                setValue('school', s?.name ?? '');
+              }}
+              hint={tAll.school.hint}
+            />
           </div>
         </Card>
 
         <Card>
-          <Textarea label="Bio" maxLength={200} value={bio} {...register('bio')} error={errors.bio?.message} />
+          <Textarea label={t.bio} maxLength={200} value={bio} {...register('bio')} error={errors.bio?.message} />
         </Card>
 
         <Card>
           <CategorizedTagPicker
-            label="Skills"
+            label={t.skills}
+            kind="skill"
             categories={SKILL_CATEGORIES}
-            searchPlaceholder="Search skills..."
             selected={skills.map((s) => s.skill)}
             onToggle={toggleSkill}
             error={errors.skills?.message as string}
@@ -222,7 +245,7 @@ export default function MyProfile() {
             <div className="mt-3 space-y-2 rounded-xl bg-surface-100 p-3">
               {skills.map((s) => (
                 <div key={s.skill} className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-surface-700">{s.skill}</span>
+                  <span className="text-sm font-medium text-surface-700">{skillLabel(tAll, s.skill)}</span>
                   <div className="flex gap-1">
                     {SKILL_LEVEL_OPTIONS.map((lvl) => (
                       <button
@@ -233,7 +256,7 @@ export default function MyProfile() {
                           s.level === lvl.value ? 'bg-accent-600 text-white' : 'bg-white text-surface-500 border border-surface-200'
                         }`}
                       >
-                        {lvl.label}
+                        {tAll.skillLevel[lvl.value]}
                       </button>
                     ))}
                   </div>
@@ -245,7 +268,7 @@ export default function MyProfile() {
 
         <Card>
           <CategorizedTagPicker
-            label="Interests"
+            label={t.interests}
             categories={INTEREST_CATEGORIES}
             selected={interests}
             onToggle={toggleInterest}
@@ -255,12 +278,12 @@ export default function MyProfile() {
 
         <Card>
           <p className="mb-1.5 text-sm font-medium text-surface-700">
-            How can teammates reach you? <span className="font-normal text-surface-400">(at least one required)</span>
+            {t.howReach} <span className="font-normal text-surface-400">{t.atLeastOne}</span>
           </p>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Telegram" placeholder="@username" {...register('telegram')} error={errors.telegram?.message} />
             <Input label="GitHub" placeholder="username" {...register('github')} />
-            <Input label="Portfolio" placeholder="https://" {...register('portfolio')} />
+            <Input label={t.portfolio} placeholder="https://" {...register('portfolio')} />
             <Input label="Instagram" placeholder="@username" {...register('instagram')} />
           </div>
         </Card>
@@ -269,10 +292,10 @@ export default function MyProfile() {
 
         <div className="flex gap-3">
           <Button type="button" variant="secondary" className="flex-1" onClick={cancelEditing} disabled={isSubmitting}>
-            Cancel
+            {tAll.common.cancel}
           </Button>
           <Button type="submit" className="flex-1" loading={isSubmitting}>
-            Save changes
+            {tAll.common.saveChanges}
           </Button>
         </div>
       </form>
@@ -282,10 +305,10 @@ export default function MyProfile() {
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold text-surface-900">My Profile</h1>
+        <h1 className="text-lg font-semibold text-surface-900">{t.myProfile}</h1>
         <Button variant="secondary" size="sm" onClick={startEditing} type="button">
           <Pencil size={14} />
-          Edit profile
+          {t.editProfile}
         </Button>
       </div>
 
@@ -295,7 +318,7 @@ export default function MyProfile() {
         return (
           <Card>
             <div className="flex items-center justify-between text-sm">
-              <p className="font-medium text-surface-700">Profile strength</p>
+              <p className="font-medium text-surface-700">{t.strength}</p>
               <p className="text-surface-500">{percent}%</p>
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-100">
@@ -303,7 +326,7 @@ export default function MyProfile() {
             </div>
             <p className="mt-2 text-xs text-surface-500">
               {missing.slice(0, 2).join(' · ')}
-              {missing.length > 2 ? ` · +${missing.length - 2} more` : ''}
+              {missing.length > 2 ? ` · ${t.more(missing.length - 2)}` : ''}
             </p>
           </Card>
         );
@@ -315,7 +338,7 @@ export default function MyProfile() {
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-surface-900">{profile.name}</h2>
             <p className="text-sm text-surface-500">
-              {profile.city} · Grade {profile.grade}
+              {profile.city} · {t.grade(profile.grade)}
               {profile.school ? ` · ${profile.school}` : ''}
             </p>
             {(profile.email ?? user?.email) && (
@@ -325,18 +348,18 @@ export default function MyProfile() {
             {profile.bio && <p className="mt-3 whitespace-pre-wrap text-sm text-surface-700">{profile.bio}</p>}
           </div>
         </div>
-        {uploading && <p className="mt-2 text-xs text-surface-400">Uploading photo...</p>}
+        {uploading && <p className="mt-2 text-xs text-surface-400">{t.uploadingPhoto}</p>}
       </Card>
 
       <Card>
-        <p className="mb-2 text-sm font-medium text-surface-700">Skills</p>
+        <p className="mb-2 text-sm font-medium text-surface-700">{t.skills}</p>
         {profile.skills.length === 0 ? (
-          <p className="text-xs text-surface-400">No skills added yet.</p>
+          <p className="text-xs text-surface-400">{t.noSkills}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {profile.skills.map((s) => (
               <Badge key={s.skill} tone="accent">
-                {s.skill} · {s.level}
+                {skillLabel(tAll, s.skill)} · {tAll.skillLevel[s.level]}
               </Badge>
             ))}
           </div>
@@ -344,24 +367,30 @@ export default function MyProfile() {
       </Card>
 
       <Card>
-        <p className="mb-2 text-sm font-medium text-surface-700">Interests</p>
+        <p className="mb-2 text-sm font-medium text-surface-700">{t.interests}</p>
         {profile.interests.length === 0 ? (
-          <p className="text-xs text-surface-400">No interests added yet.</p>
+          <p className="text-xs text-surface-400">{t.noInterests}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {profile.interests.map((i) => (
               <Badge key={i} tone="gray">
-                {i}
+                {interestLabel(tAll, i)}
               </Badge>
             ))}
           </div>
         )}
       </Card>
 
+      <XpCard uid={profile.uid} />
+
+      <AchievementsSection uid={profile.uid} editable />
+
+      <TeamsSection uid={profile.uid} emptyText={tAll.teams.emptyOwn} />
+
       <Card>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-sm font-medium text-surface-700">Contacts</p>
-          <span className="text-xs text-surface-400">Only visible to teammates you accept</span>
+          <p className="text-sm font-medium text-surface-700">{t.contacts}</p>
+          <span className="text-xs text-surface-400">{t.contactsHint}</span>
         </div>
         <ContactLinks contacts={profile.contacts} />
       </Card>
@@ -369,17 +398,22 @@ export default function MyProfile() {
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={copyProfileLink} type="button">
           {linkCopied ? <Check size={14} /> : <Link2 size={14} />}
-          {linkCopied ? 'Link copied' : 'Copy profile link'}
+          {linkCopied ? t.linkCopied : t.copyLink}
         </Button>
         <Link to={`/users/${profile.uid}`} className="flex-1">
           <Button variant="secondary" className="w-full" type="button">
-            View as others see it
+            {t.viewAsOthers}
           </Button>
         </Link>
       </div>
 
       <Card>
-        <p className="mb-3 text-sm font-medium text-surface-700">Settings</p>
+        <p className="mb-3 text-sm font-medium text-surface-700">{t.settings}</p>
+
+        <div className="mb-4 flex items-center justify-between gap-3 border-b border-surface-100 pb-3.5">
+          <p className="text-sm text-surface-800">{t.language}</p>
+          <LanguageSwitcher compact />
+        </div>
 
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-start gap-2.5">
@@ -389,37 +423,39 @@ export default function MyProfile() {
               <Bell size={16} className="mt-0.5 shrink-0 text-surface-400" />
             )}
             <div>
-              <p className="text-sm text-surface-800">Push notifications</p>
+              <p className="text-sm text-surface-800">{t.push}</p>
               <p className="text-xs text-surface-400">
-                {pushStatus === 'unsupported' && "Not supported on this browser/device."}
-                {pushStatus === 'checking' && 'Checking...'}
-                {pushStatus === 'default' && 'Get notified about applications and decisions.'}
-                {pushStatus === 'enabling' && 'Requesting permission...'}
-                {pushStatus === 'granted' && 'Enabled on this device.'}
-                {pushStatus === 'denied' && 'Blocked — enable notifications for this site in browser settings.'}
+                {pushStatus === 'unsupported' && t.pushUnsupported}
+                {pushStatus === 'checking' && t.pushChecking}
+                {pushStatus === 'default' && t.pushDefault}
+                {pushStatus === 'enabling' && t.pushEnabling}
+                {pushStatus === 'granted' && t.pushGranted}
+                {pushStatus === 'denied' && t.pushDenied}
               </p>
             </div>
           </div>
           {(pushStatus === 'default' || pushStatus === 'enabling') && (
             <Button size="sm" variant="secondary" onClick={enablePush} loading={pushStatus === 'enabling'} type="button">
-              Enable
+              {t.enable}
             </Button>
           )}
         </div>
+
+        <TelegramSettingsRow uid={profile.uid} />
 
         <Link
           to="/privacy"
           className="mt-4 flex items-center gap-2.5 border-t border-surface-100 pt-3.5 text-sm text-surface-600 hover:text-surface-900"
         >
           <ShieldCheck size={16} className="shrink-0 text-surface-400" />
-          Privacy policy
+          {t.privacy}
         </Link>
       </Card>
 
-      <FeedbackButton label="Report a bug or issue" variant="secondary" className="w-full" />
+      <FeedbackButton label={t.reportBug} variant="secondary" className="w-full" />
 
       <Button variant="secondary" className="w-full" onClick={() => signOut()}>
-        Sign out
+        {tAll.common.signOut}
       </Button>
     </div>
   );

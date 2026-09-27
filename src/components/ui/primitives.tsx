@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/utils/cn';
+import { useT } from '@/i18n';
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
@@ -73,16 +74,17 @@ export function Skeleton({ className }: { className?: string }) {
  * reaches the user — it just looks like an empty list. Surface it instead.
  */
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const t = useT().common;
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-      <p className="font-medium">Couldn't load this.</p>
+      <p className="font-medium">{t.couldntLoad}</p>
       <p className="mt-1 break-all text-xs text-red-600">{error instanceof Error ? error.message : String(error)}</p>
       <button
         type="button"
         onClick={onRetry}
         className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
       >
-        Retry
+        {t.retry}
       </button>
     </div>
   );

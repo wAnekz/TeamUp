@@ -2,12 +2,15 @@ User-agent: *
 Allow: /$
 Allow: /login
 Allow: /privacy
+Allow: /feed
+Allow: /events
+Allow: /schools
 Disallow: /dashboard
 Disallow: /moderation
 Disallow: /projects/
 Disallow: /users/
 Disallow: /complete-profile
 Disallow: /looking-for-team
-Disallow: /feed
+Disallow: /invite/
 
 Sitemap: https://team-up-web.netlify.app/sitemap.xml

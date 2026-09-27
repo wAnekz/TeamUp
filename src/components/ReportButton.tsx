@@ -4,18 +4,14 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateReport } from '@/hooks/useReports';
+import { useT } from '@/i18n';
 import type { ReportTargetType } from '@/types';
 
-const REASONS = [
-  'Inappropriate or offensive content',
-  'Fake profile or project',
-  'Harassment or unsafe behavior',
-  'Spam',
-  'Something else',
-];
 
 export function ReportButton({ targetType, targetId }: { targetType: ReportTargetType; targetId: string }) {
   const { user } = useAuth();
+  const t = useT().report;
+  const target = t.targets[targetType];
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [sent, setSent] = useState(false);
@@ -37,7 +33,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
         className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-400 hover:text-red-600"
       >
         <Flag size={13} />
-        Report
+        {t.report}
       </button>
       <Modal
         open={open}
@@ -46,16 +42,14 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
           setSent(false);
           setReason('');
         }}
-        title={sent ? 'Report sent' : `Report this ${targetType}`}
+        title={sent ? t.sent : t.title(target)}
       >
         {sent ? (
-          <p className="text-sm text-surface-600">
-            Thanks - a moderator will look into it. This isn't public and the {targetType} owner won't be notified.
-          </p>
+          <p className="text-sm text-surface-600">{t.thanks(target)}</p>
         ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              {REASONS.map((r) => (
+              {t.reasons.map((r) => (
                 <label key={r} className="flex cursor-pointer items-center gap-2 rounded-lg border border-surface-200 px-3 py-2 text-sm has-[:checked]:border-accent-400 has-[:checked]:bg-accent-50">
                   <input type="radio" name="reason" value={r} checked={reason === r} onChange={() => setReason(r)} />
                   {r}
@@ -63,7 +57,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
               ))}
             </div>
             <Button className="w-full" onClick={submit} disabled={!reason} loading={isPending}>
-              Send report
+              {t.send}
             </Button>
           </div>
         )}

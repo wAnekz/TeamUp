@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { BarChart3, Inbox } from 'lucide-react';
 import { Card, Badge, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +12,11 @@ import {
 } from '@/hooks/useReports';
 import { usePublicProfile } from '@/hooks/useProfile';
 import { timeAgo } from '@/utils/dates';
-import { toast } from '@/lib/toast';
+import { toast, errorToMessage } from '@/lib/toast';
+import { useMutation } from '@tanstack/react-query';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/lib/firebase';
+import { useT } from '@/i18n';
 import type { Report } from '@/types';
 
 export default function ModerationReports() {
@@ -21,28 +26,42 @@ export default function ModerationReports() {
   // just be rejected by Firestore rules anyway, this just avoids the noise.
   const { data: reports, isLoading } = useOpenReports(!!isModerator);
   const markReviewed = useMarkReportReviewed();
+  const tAll = useT();
 
   if (checkingModerator) return <Skeleton className="h-40" />;
 
   if (!isModerator) {
     return (
       <p className="mx-auto max-w-md text-center text-sm text-surface-500">
-        This page is only visible to moderators.
+        {tAll.errors.moderatorsOnly}
       </p>
     );
   }
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-xl font-bold text-surface-900">Open reports</h1>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/moderation/stats">
+          <Button size="sm" variant="secondary">
+            <BarChart3 size={14} /> {tAll.metrics.link}
+          </Button>
+        </Link>
+        <Link to="/moderation/events">
+          <Button size="sm" variant="secondary">
+            <Inbox size={14} /> {tAll.events.foundAuto}
+          </Button>
+        </Link>
+      </div>
+      <BackfillXpCard />
+      <h1 className="text-xl font-bold text-surface-900">{tAll.moderation.openReports}</h1>
       {isLoading && <Skeleton className="h-24" />}
-      {!isLoading && reports?.length === 0 && <p className="text-sm text-surface-500">Nothing open - you're caught up.</p>}
+      {!isLoading && reports?.length === 0 && <p className="text-sm text-surface-500">{tAll.moderation.caughtUp}</p>}
       {reports?.map((r) => (
         <ReportCard
           key={r.id}
           report={r}
           onMarkReviewed={() =>
-            markReviewed.mutate(r.id, { onSuccess: () => toast.success('Marked reviewed') })
+            markReviewed.mutate(r.id, { onSuccess: () => toast.success(tAll.moderation.markedReviewed) })
           }
           markingReviewed={markReviewed.isPending}
         />
@@ -60,22 +79,24 @@ function ReportCard({
   onMarkReviewed: () => void;
   markingReviewed: boolean;
 }) {
+  const tAll = useT();
+  const t = tAll.moderation;
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <Badge tone="gray">{report.targetType}</Badge>
+          <Badge tone="gray">{tAll.report.targets[report.targetType]}</Badge>
           <p className="mt-2 text-sm text-surface-800">{report.reason}</p>
           <Link
             to={report.targetType === 'profile' ? `/users/${report.targetId}` : `/projects/${report.targetId}`}
             className="mt-1 inline-block text-xs text-accent-600 hover:underline"
           >
-            View {report.targetType} →
+            {t.view(report.targetType)}
           </Link>
           <p className="mt-1 text-xs text-surface-400">{timeAgo(report.createdAt)}</p>
         </div>
         <Button size="sm" variant="secondary" onClick={onMarkReviewed} loading={markingReviewed}>
-          Mark reviewed
+          {t.markReviewed}
         </Button>
       </div>
 
@@ -97,9 +118,10 @@ function ReportCard({
  */
 function DeleteProjectAction({ projectId }: { projectId: string }) {
   const deleteMutation = useDeleteReportedProject();
+  const t = useT().moderation;
 
   if (deleteMutation.isSuccess) {
-    return <span className="text-xs font-medium text-surface-400">Project deleted.</span>;
+    return <span className="text-xs font-medium text-surface-400">{t.projectDeleted}</span>;
   }
 
   return (
@@ -108,12 +130,12 @@ function DeleteProjectAction({ projectId }: { projectId: string }) {
       variant="danger"
       loading={deleteMutation.isPending}
       onClick={() => {
-        if (confirm('Delete this project permanently? This removes it for everyone and cannot be undone.')) {
-          deleteMutation.mutate(projectId, { onSuccess: () => toast.success('Project deleted') });
+        if (confirm(t.confirmDeleteProject)) {
+          deleteMutation.mutate(projectId, { onSuccess: () => toast.success(t.projectDeleted) });
         }
       }}
     >
-      Delete project
+      {t.deleteProject}
     </Button>
   );
 }
@@ -128,8 +150,9 @@ function DeleteProjectAction({ projectId }: { projectId: string }) {
 function BanUserAction({ userId }: { userId: string }) {
   const { data: profile, isLoading } = usePublicProfile(userId);
   const setBanned = useSetUserBanned();
+  const t = useT().moderation;
 
-  if (isLoading) return <span className="text-xs text-surface-400">Checking user...</span>;
+  if (isLoading) return <span className="text-xs text-surface-400">{t.checkingUser}</span>;
 
   const isBanned = !!profile?.banned;
 
@@ -142,11 +165,11 @@ function BanUserAction({ userId }: { userId: string }) {
         onClick={() =>
           setBanned.mutate(
             { userId, banned: false },
-            { onSuccess: () => toast.success('User unbanned') },
+            { onSuccess: () => toast.success(t.unbanned) },
           )
         }
       >
-        Unban user
+        {t.unban}
       </Button>
     );
   }
@@ -157,12 +180,42 @@ function BanUserAction({ userId }: { userId: string }) {
       variant="danger"
       loading={setBanned.isPending}
       onClick={() => {
-        if (confirm("Ban this user? They'll be signed out and blocked from using TeamUp until unbanned.")) {
-          setBanned.mutate({ userId, banned: true }, { onSuccess: () => toast.success('User banned') });
+        if (confirm(t.confirmBan)) {
+          setBanned.mutate({ userId, banned: true }, { onSuccess: () => toast.success(t.banned) });
         }
       }}
     >
-      Ban user
+      {t.ban}
     </Button>
+  );
+}
+
+/**
+ * One-off: grants XP/badges for activity from before gamification existed.
+ * Idempotent server-side (functions/src/gamification.ts → backfillXp), so
+ * pressing it twice is harmless.
+ */
+function BackfillXpCard() {
+  const t = useT().gamification;
+  const backfill = useMutation({
+    mutationFn: async () => (await httpsCallable<void, { processed: number }>(functions, 'backfillXp')()).data,
+  });
+  return (
+    <Card className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-sm font-medium text-surface-800">{t.recalc}</p>
+        <p className="text-xs text-surface-500">
+          {backfill.data ? t.recalcDone(backfill.data.processed) : t.recalcHint}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        variant="secondary"
+        loading={backfill.isPending}
+        onClick={() => backfill.mutate(undefined, { onError: (e) => toast.error(errorToMessage(e)) })}
+      >
+        {t.run}
+      </Button>
+    </Card>
   );
 }

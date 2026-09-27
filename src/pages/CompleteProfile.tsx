@@ -5,6 +5,8 @@ import { serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input, Textarea } from '@/components/ui/Input';
+import { SchoolPicker } from '@/components/profile/SchoolPicker';
+import { skillLabel, useT } from '@/i18n';
 import { Button } from '@/components/ui/Button';
 import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
 import { SKILL_CATEGORIES, SKILL_LEVEL_OPTIONS, INTEREST_CATEGORIES, GRADE_OPTIONS } from '@/constants/options';
@@ -32,6 +34,11 @@ export default function CompleteProfile() {
   const skills = watch('skills') ?? [];
   const interests = watch('interests') ?? [];
   const bio = watch('bio') ?? '';
+  const tAll = useT();
+  const t = tAll.profile;
+  const schoolId = watch('schoolId');
+  const schoolName = watch('school');
+  const city = watch('city');
 
   const toggleSkill = (skill: Skill) => {
     const exists = skills.find((s) => s.skill === skill);
@@ -68,6 +75,7 @@ export default function CompleteProfile() {
           grade: values.grade,
           city: values.city,
           school: values.school || null,
+          schoolId: values.schoolId || null,
           bio: values.bio || '',
           skills: values.skills,
           interests: values.interests,
@@ -87,46 +95,57 @@ export default function CompleteProfile() {
       await refreshProfile();
       navigate('/feed');
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : 'Could not save your profile');
+      setServerError(e instanceof Error ? e.message : t.couldNotSave);
     }
   };
 
   return (
     <div className="mx-auto min-h-dvh max-w-xl px-4 py-8 sm:py-12">
-      <h1 className="text-2xl font-bold text-surface-900">Complete your profile</h1>
-      <p className="mt-1 text-sm text-surface-500">This helps other students find you and understand what you bring to a team.</p>
+      <h1 className="text-2xl font-bold text-surface-900">{tAll.complete.title}</h1>
+      <p className="mt-1 text-sm text-surface-500">{tAll.complete.subtitle}</p>
 
       <form onSubmit={handleSubmit(onSubmit, scrollToFirstError)} className="mt-6 space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Full name" {...register('name')} error={errors.name?.message} />
-          <Input label="Age" type="number" {...register('age')} error={errors.age?.message} />
+          <Input label={t.fullName} {...register('name')} error={errors.name?.message} />
+          <Input label={t.age} type="number" {...register('age')} error={errors.age?.message} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-surface-700">Grade</span>
+            <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.grade_}</span>
             <select
               {...register('grade')}
               className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
             >
               {GRADE_OPTIONS.map((g) => (
                 <option key={g} value={g}>
-                  Grade {g}
+                  {t.grade(g)}
                 </option>
               ))}
             </select>
           </label>
-          <Input label="City" placeholder="Almaty" {...register('city')} error={errors.city?.message} />
+          <Input label={t.city} placeholder="Алматы" {...register('city')} error={errors.city?.message} />
         </div>
 
-        <Input label="School (optional)" {...register('school')} />
+        {user && (
+          <SchoolPicker
+            uid={user.uid}
+            city={city}
+            value={schoolId && schoolName ? { id: schoolId, name: schoolName } : null}
+            onChange={(s) => {
+              setValue('schoolId', s?.id ?? '');
+              setValue('school', s?.name ?? '');
+            }}
+            hint={tAll.school.hint}
+          />
+        )}
 
-        <Textarea label="Bio" placeholder="What are you working on?" maxLength={200} value={bio} {...register('bio')} />
+        <Textarea label={t.bio} placeholder={tAll.complete.bioPlaceholder} maxLength={200} value={bio} {...register('bio')} />
 
         <CategorizedTagPicker
-          label="Skills"
+          label={t.skills}
+          kind="skill"
           categories={SKILL_CATEGORIES}
-          searchPlaceholder="Search skills..."
           selected={skills.map((s) => s.skill)}
           onToggle={toggleSkill}
           error={errors.skills?.message as string}
@@ -136,7 +155,7 @@ export default function CompleteProfile() {
           <div className="space-y-2 rounded-xl bg-surface-100 p-3">
             {skills.map((s) => (
               <div key={s.skill} className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-surface-700">{s.skill}</span>
+                <span className="text-sm font-medium text-surface-700">{skillLabel(tAll, s.skill)}</span>
                 <div className="flex gap-1">
                   {SKILL_LEVEL_OPTIONS.map((lvl) => (
                     <button
@@ -147,7 +166,7 @@ export default function CompleteProfile() {
                         s.level === lvl.value ? 'bg-accent-600 text-white' : 'bg-white text-surface-500 border border-surface-200'
                       }`}
                     >
-                      {lvl.label}
+                      {tAll.skillLevel[lvl.value]}
                     </button>
                   ))}
                 </div>
@@ -156,16 +175,16 @@ export default function CompleteProfile() {
           </div>
         )}
 
-        <CategorizedTagPicker label="Interests" categories={INTEREST_CATEGORIES} selected={interests} onToggle={toggleInterest} error={errors.interests?.message as string} />
+        <CategorizedTagPicker label={t.interests} categories={INTEREST_CATEGORIES} selected={interests} onToggle={toggleInterest} error={errors.interests?.message as string} />
 
         <div>
           <p className="mb-1.5 text-sm font-medium text-surface-700">
-            How can teammates reach you? <span className="font-normal text-surface-400">(at least one required)</span>
+            {t.howReach} <span className="font-normal text-surface-400">{t.atLeastOne}</span>
           </p>
           <div className="grid grid-cols-2 gap-4">
             <Input label="Telegram" placeholder="@username" {...register('telegram')} error={errors.telegram?.message} />
             <Input label="GitHub" placeholder="username" {...register('github')} />
-            <Input label="Portfolio" placeholder="https://" {...register('portfolio')} />
+            <Input label={t.portfolio} placeholder="https://" {...register('portfolio')} />
             <Input label="Instagram" placeholder="@username" {...register('instagram')} />
           </div>
         </div>
@@ -173,7 +192,7 @@ export default function CompleteProfile() {
         {serverError && <p className="text-sm text-red-600">{serverError}</p>}
 
         <Button type="submit" className="w-full" loading={isSubmitting}>
-          Finish setup
+          {tAll.complete.finish}
         </Button>
       </form>
     </div>

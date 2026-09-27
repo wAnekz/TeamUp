@@ -1,16 +1,23 @@
 import { useParams } from 'react-router-dom';
+import { Download, School } from 'lucide-react';
 import { Card, Badge, Avatar, Skeleton } from '@/components/ui/primitives';
-import { ProjectCard } from '@/components/projects/ProjectCard';
-import { useAuthorProjects } from '@/hooks/useProjects';
+import { Button } from '@/components/ui/Button';
 import { usePublicProfile } from '@/hooks/useProfile';
 import { lastActiveLabel } from '@/utils/dates';
 import { ReportButton } from '@/components/ReportButton';
 import { ContactLinks } from '@/components/profile/ContactLinks';
+import { TeamsSection } from '@/components/profile/TeamsSection';
+import { AchievementsSection } from '@/components/profile/AchievementsSection';
+import { BadgesCard, LevelPill } from '@/components/gamification/Gamification';
+import { useAuth } from '@/contexts/AuthContext';
+import { interestLabel, skillLabel, useT } from '@/i18n';
 
 export default function UserProfile() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { data: profile, isLoading } = usePublicProfile(id);
-  const { data: projects, isLoading: loadingProjects } = useAuthorProjects(id);
+  const tAll = useT();
+  const t = tAll.profile;
 
   if (isLoading) {
     return (
@@ -21,71 +28,78 @@ export default function UserProfile() {
     );
   }
 
-  if (!profile) return <p className="text-center text-surface-500">User not found.</p>;
+  if (!profile) return <p className="text-center text-surface-500">{t.notFound}</p>;
+
+  const isMe = user?.uid === profile.uid;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <Card>
+      <Card className="print:shadow-none">
         <div className="flex items-center gap-4">
           <Avatar src={profile.avatarUrl} name={profile.name} size={72} />
-          <div>
-            <h1 className="text-lg font-semibold text-surface-900">{profile.name}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-semibold text-surface-900">{profile.name}</h1>
+              <LevelPill uid={profile.uid} />
+            </div>
             <p className="text-sm text-surface-500">
-              {profile.city} · Grade {profile.grade}
+              {profile.city} · {t.grade(profile.grade)}
             </p>
-            <p className="text-xs text-surface-400">{lastActiveLabel(profile.lastActiveAt)}</p>
+            {profile.school && (
+              <p className="mt-0.5 flex items-center gap-1 text-sm text-surface-500">
+                <School size={13} /> {profile.school}
+              </p>
+            )}
+            <p className="text-xs text-surface-400 print:hidden">{lastActiveLabel(profile.lastActiveAt)}</p>
           </div>
         </div>
         {profile.bio && <p className="mt-4 whitespace-pre-wrap text-sm text-surface-700">{profile.bio}</p>}
         <div className="mt-4 border-t border-surface-100 pt-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-400">Contact</p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-400">{t.contact}</p>
           <ContactLinks contacts={profile.contacts} />
         </div>
-        <div className="mt-3 flex justify-end">
-          <ReportButton targetType="profile" targetId={profile.uid} />
+        <div className="mt-3 flex items-center justify-between gap-2 print:hidden">
+          {/* Browser print → "Save as PDF" gives a clean one-file portfolio
+              (nav and buttons are print:hidden) for university/grant
+              applications, without a PDF library in the bundle. */}
+          <Button size="sm" variant="secondary" onClick={() => window.print()}>
+            <Download size={14} /> {t.savePdf}
+          </Button>
+          {!isMe && <ReportButton targetType="profile" targetId={profile.uid} />}
         </div>
       </Card>
 
       {profile.skills.length > 0 && (
-        <Card>
-          <p className="mb-2 text-sm font-medium text-surface-700">Skills</p>
+        <Card className="print:break-inside-avoid print:shadow-none">
+          <p className="mb-2 text-sm font-medium text-surface-700">{t.skills}</p>
           <div className="flex flex-wrap gap-1.5">
             {profile.skills.map((s) => (
               <Badge key={s.skill} tone="accent">
-                {s.skill} · {s.level}
+                {skillLabel(tAll, s.skill)} · {tAll.skillLevel[s.level]}
               </Badge>
             ))}
           </div>
         </Card>
       )}
 
+      <BadgesCard uid={profile.uid} />
+
+      <AchievementsSection uid={profile.uid} />
+
+      <TeamsSection uid={profile.uid} emptyText={tAll.teams.emptyOther} />
+
       {profile.interests.length > 0 && (
-        <Card>
-          <p className="mb-2 text-sm font-medium text-surface-700">Interests</p>
+        <Card className="print:break-inside-avoid print:shadow-none">
+          <p className="mb-2 text-sm font-medium text-surface-700">{t.interests}</p>
           <div className="flex flex-wrap gap-1.5">
             {profile.interests.map((i) => (
               <Badge key={i} tone="gray">
-                {i}
+                {interestLabel(tAll, i)}
               </Badge>
             ))}
           </div>
         </Card>
       )}
-
-      <div>
-        <h2 className="mb-3 text-lg font-semibold text-surface-900">Projects</h2>
-        {loadingProjects && <Skeleton className="h-32" />}
-        {!loadingProjects && (!projects || projects.length === 0) && (
-          <p className="text-sm text-surface-500">No published projects yet.</p>
-        )}
-        {projects && projects.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {projects.map((p) => (
-              <ProjectCard key={p.id} project={p} />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

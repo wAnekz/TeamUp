@@ -1,11 +1,13 @@
 import { Send, Github, Globe, Instagram } from 'lucide-react';
 import type { UserContacts } from '@/types';
+import { useT } from '@/i18n';
 
 function normalizeHandle(value: string) {
   return value.replace(/^@/, '').trim();
 }
 
 export function ContactLinks({ contacts }: { contacts: UserContacts | undefined }) {
+  const t = useT().profile;
   if (!contacts) return null;
   const links: { key: string; href: string; label: string; icon: typeof Send }[] = [];
 
@@ -20,10 +22,10 @@ export function ContactLinks({ contacts }: { contacts: UserContacts | undefined 
   }
   if (contacts.portfolio) {
     const href = contacts.portfolio.startsWith('http') ? contacts.portfolio : `https://${contacts.portfolio}`;
-    links.push({ key: 'portfolio', href, label: 'Portfolio', icon: Globe });
+    links.push({ key: 'portfolio', href, label: t.portfolio, icon: Globe });
   }
 
-  if (links.length === 0) return <p className="text-xs text-surface-400">No contacts added yet.</p>;
+  if (links.length === 0) return <p className="text-xs text-surface-400">{t.noContacts}</p>;
 
   return (
     <div className="flex flex-wrap gap-2">

@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Textarea } from '@/components/ui/Input';
 import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
+import { LevelPill } from '@/components/gamification/Gamification';
+import { interestLabel, skillLabel, translateError, useT } from '@/i18n';
 import { SKILL_CATEGORIES, INTEREST_CATEGORIES } from '@/constants/options';
 import { lookingForTeamSchema, type LookingForTeamFormValues } from '@/utils/validation';
 import { formatDeadline, isDeadlinePassed, isStale, timeAgo } from '@/utils/dates';
@@ -25,6 +27,8 @@ export default function LookingForTeam() {
   const { data: posts, isLoading, isError, error, refetch } = useLookingForTeamFeed();
   const [open, setOpen] = useState(false);
   const deactivateMutation = useDeactivateLookingForTeamPost();
+  const tAll = useT();
+  const t = tAll.lft;
   const [searchParams, setSearchParams] = useSearchParams();
   // Set when arriving from an event's "Find a team" button (see
   // EventDetail.tsx). Filters the feed to that competition and pre-fills
@@ -45,18 +49,18 @@ export default function LookingForTeam() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-surface-900">Looking for a team</h1>
+        <h1 className="text-xl font-bold text-surface-900">{t.title}</h1>
         <Button size="sm" onClick={() => setOpen(true)}>
-          <Plus size={14} /> Post
+          <Plus size={14} /> {t.post}
         </Button>
       </div>
 
       {eventTag && (
         <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-accent-200 bg-accent-50 px-3.5 py-2.5 text-sm text-accent-800">
           <span>
-            Showing people looking for a team for <strong>{eventTag}</strong>
+            {t.showingFor} <strong>{eventTag}</strong>
           </span>
-          <button type="button" onClick={clearEventFilter} className="shrink-0 rounded-lg p-1 hover:bg-accent-100" aria-label="Clear filter">
+          <button type="button" onClick={clearEventFilter} className="shrink-0 rounded-lg p-1 hover:bg-accent-100" aria-label={t.clear}>
             <X size={14} />
           </button>
         </div>
@@ -74,9 +78,7 @@ export default function LookingForTeam() {
 
       {!isLoading && !isError && filteredPosts?.length === 0 && (
         <div className="rounded-2xl border border-dashed border-surface-300 py-16 text-center text-surface-500">
-          {eventTag
-            ? "No one's posted for this event yet. Be the first."
-            : "No one's posted yet. Be the first to say you're looking for a team."}
+          {eventTag ? t.emptyEvent : t.empty}
         </div>
       )}
 
@@ -92,34 +94,35 @@ export default function LookingForTeam() {
                   <Avatar src={post.authorAvatarUrl} name={post.authorName} size={32} />
                   <span className="font-medium text-surface-900">{post.authorName}</span>
                 </Link>
+                <LevelPill uid={post.authorId} className="mr-auto" />
                 <span className="text-xs text-surface-400">{timeAgo(post.createdAt, 'Created')}</span>
               </div>
               <p className="mt-2.5 text-sm text-surface-700">{post.description}</p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {post.skills.map((s) => (
                   <Badge key={s.skill} tone="accent">
-                    {s.skill} · {s.level}
+                    {skillLabel(tAll, s.skill)} · {tAll.skillLevel[s.level]}
                   </Badge>
                 ))}
                 {post.interests.map((i) => (
                   <Badge key={i} tone="gray">
-                    {i}
+                    {interestLabel(tAll, i)}
                   </Badge>
                 ))}
               </div>
               {post.desiredCompetitions.length > 0 && (
-                <p className="mt-2 text-xs text-surface-500">Looking for: {post.desiredCompetitions.join(', ')}</p>
+                <p className="mt-2 text-xs text-surface-500">{t.lookingFor(post.desiredCompetitions.join(', '))}</p>
               )}
 
               <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-surface-100 pt-3">
                 {post.availableUntil && !expired && (
-                  <Badge tone="gray">Available until {formatDeadline(post.availableUntil)}</Badge>
+                  <Badge tone="gray">{t.availableUntil(formatDeadline(post.availableUntil))}</Badge>
                 )}
-                {expired && <Badge tone="red">Availability window passed</Badge>}
-                {!expired && stale && <Badge tone="yellow">Might be outdated - posted a while ago</Badge>}
+                {expired && <Badge tone="red">{t.expired}</Badge>}
+                {!expired && stale && <Badge tone="yellow">{t.stale}</Badge>}
                 {isMine && (
                   <Button size="sm" variant="secondary" onClick={() => deactivateMutation.mutate(post.id)}>
-                    Found a team
+                    {t.foundTeam}
                   </Button>
                 )}
               </div>
@@ -145,6 +148,8 @@ function CreatePostModal({
   const { user, profile } = useAuth();
   const createMutation = useCreateLookingForTeamPost();
   const [competitionInput, setCompetitionInput] = useState('');
+  const tAll = useT();
+  const t = tAll.lft;
 
   const {
     register,
@@ -205,37 +210,35 @@ function CreatePostModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="I'm looking for a team">
+    <Modal open={open} onClose={onClose} title={t.modalTitle}>
       <form onSubmit={handleSubmit(submit, scrollToFirstError)} className="space-y-4">
         <Textarea
-          label="Description"
-          placeholder="e.g. Flutter developer looking for an AI hackathon team"
+          label={t.description}
+          placeholder={t.descPlaceholder}
           maxLength={400}
           value={description}
           {...register('description')}
           error={errors.description?.message}
         />
         <CategorizedTagPicker
-          label="Skills"
+          label={t.skills}
+          kind="skill"
           categories={SKILL_CATEGORIES}
-          searchPlaceholder="Search skills..."
           selected={skills.map((s) => s.skill)}
           onToggle={toggleSkill}
           error={errors.skills?.message as string}
         />
-        <CategorizedTagPicker label="Interests" categories={INTEREST_CATEGORIES} selected={interests} onToggle={toggleInterest} error={errors.interests?.message as string} />
+        <CategorizedTagPicker label={t.interests} categories={INTEREST_CATEGORIES} selected={interests} onToggle={toggleInterest} error={errors.interests?.message as string} />
 
         <Input
-          label="Available until (optional)"
+          label={t.availableUntilLabel}
           type="date"
           {...register('availableUntil')}
         />
-        <p className="-mt-3 text-xs text-surface-400">
-          So people know you might've found a team already if this date passes.
-        </p>
+        <p className="-mt-3 text-xs text-surface-400">{t.availableHint}</p>
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-surface-700">Desired competitions</span>
+          <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.competitions}</span>
           <div className="flex gap-2">
             <input
               value={competitionInput}
@@ -245,7 +248,7 @@ function CreatePostModal({
               className="flex-1 rounded-xl border border-surface-200 px-3.5 py-2 text-sm focus:border-accent-500"
             />
             <Button type="button" variant="secondary" onClick={addCompetition}>
-              Add
+              {tAll.common.add}
             </Button>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -255,11 +258,13 @@ function CreatePostModal({
               </Badge>
             ))}
           </div>
-          {errors.desiredCompetitions && <p className="mt-1 text-xs text-red-600">{errors.desiredCompetitions.message}</p>}
+          {errors.desiredCompetitions && (
+            <p className="mt-1 text-xs text-red-600">{translateError(tAll, errors.desiredCompetitions.message)}</p>
+          )}
         </div>
 
         <Button type="submit" className="w-full" loading={isSubmitting}>
-          Post
+          {t.post}
         </Button>
       </form>
     </Modal>

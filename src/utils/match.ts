@@ -1,4 +1,4 @@
-import type { Project, UserProfile } from '@/types';
+import type { LookingForTeamPost, Project, ProjectRole, UserProfile } from '@/types';
 
 export interface MatchResult {
   score: number; // 0-100
@@ -44,4 +44,37 @@ export function rankByMatch(profile: UserProfile, projects: Project[], limit = 3
     .filter((r) => r.match.score > 0)
     .sort((a, b) => b.match.score - a.match.score)
     .slice(0, limit);
+}
+
+export interface TeammateSuggestion {
+  post: LookingForTeamPost;
+  role: ProjectRole;
+  matchedSkills: string[];
+  score: number;
+}
+
+/**
+ * Reverse of rankByMatch: for a project owner, which "looking for team"
+ * posters fit an open role. Each person appears once, under the role they
+ * fit best. Skills are what decide it; a shared interest only breaks ties.
+ */
+export function suggestTeammates(project: Project, posts: LookingForTeamPost[], exclude: Set<string>, limit = 6) {
+  const openRoles = project.roles.filter((r) => r.slotsFilled < r.slotsTotal && r.requiredSkills.length > 0);
+  const results: TeammateSuggestion[] = [];
+
+  for (const post of posts) {
+    if (exclude.has(post.authorId)) continue;
+    const postSkills = new Set(post.skills.map((s) => s.skill));
+    const sharedInterests = post.interests.filter((i) => project.interests.includes(i)).length;
+    let best: TeammateSuggestion | null = null;
+    for (const role of openRoles) {
+      const matchedSkills = role.requiredSkills.filter((s) => postSkills.has(s));
+      if (matchedSkills.length === 0) continue;
+      const score = Math.round((matchedSkills.length / role.requiredSkills.length) * 90 + Math.min(sharedInterests, 2) * 5);
+      if (!best || score > best.score) best = { post, role, matchedSkills, score };
+    }
+    if (best) results.push(best);
+  }
+
+  return results.sort((a, b) => b.score - a.score).slice(0, limit);
 }

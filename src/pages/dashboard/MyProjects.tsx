@@ -7,8 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, Badge, Skeleton, ErrorState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
-import { DISPLAY_STATUS_LABEL, DISPLAY_STATUS_TONE, formatMembers, getDisplayStatus } from '@/utils/projectStatus';
+import { displayStatusLabel, DISPLAY_STATUS_TONE, formatMembers, getDisplayStatus } from '@/utils/projectStatus';
 import { timeAgo } from '@/utils/dates';
+import { useT } from '@/i18n';
 import type { Project } from '@/types';
 
 export default function MyProjects() {
@@ -16,6 +17,8 @@ export default function MyProjects() {
   const navigate = useNavigate();
   const updateMutation = useUpdateProject();
   const deleteMutation = useDeleteProject();
+  const tAll = useT();
+  const t = tAll.project;
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['projects', 'mine', user?.uid],
     enabled: !!user,
@@ -40,7 +43,7 @@ export default function MyProjects() {
   }
 
   if (!data || data.length === 0)
-    return <p className="text-sm text-surface-500">You haven't published any projects yet.</p>;
+    return <p className="text-sm text-surface-500">{tAll.dashboard.noProjects}</p>;
 
   return (
     <div className="space-y-3">
@@ -54,9 +57,9 @@ export default function MyProjects() {
                   {project.title}
                 </Link>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-surface-500">
-                  <Badge tone={DISPLAY_STATUS_TONE[displayStatus]}>{DISPLAY_STATUS_LABEL[displayStatus]}</Badge>
-                  <span>{formatMembers(project)} members</span>
-                  <span>{project.viewCount ?? 0} views</span>
+                  <Badge tone={DISPLAY_STATUS_TONE[displayStatus]}>{displayStatusLabel(displayStatus)}</Badge>
+                  <span>{tAll.common.members(formatMembers(project))}</span>
+                  <span>{tAll.common.views(project.viewCount ?? 0)}</span>
                   <span>{timeAgo(project.updatedAt)}</span>
                 </div>
               </div>
@@ -64,7 +67,7 @@ export default function MyProjects() {
 
             <div className="mt-3 flex flex-wrap gap-2 border-t border-surface-100 pt-3">
               <Button size="sm" variant="secondary" onClick={() => navigate(`/projects/${project.id}/edit`)}>
-                <Pencil size={14} /> Edit
+                <Pencil size={14} /> {tAll.common.edit}
               </Button>
               {project.status === 'open' && (
                 <Button
@@ -75,7 +78,7 @@ export default function MyProjects() {
                     refetch();
                   }}
                 >
-                  Close recruitment
+                  {t.closeRecruitment}
                 </Button>
               )}
               {project.status === 'closed' && (
@@ -87,7 +90,7 @@ export default function MyProjects() {
                     refetch();
                   }}
                 >
-                  Reopen
+                  {t.reopen}
                 </Button>
               )}
               {project.status !== 'archived' ? (
@@ -99,7 +102,7 @@ export default function MyProjects() {
                     refetch();
                   }}
                 >
-                  Archive
+                  {t.archive}
                 </Button>
               ) : (
                 <Button
@@ -110,20 +113,20 @@ export default function MyProjects() {
                     refetch();
                   }}
                 >
-                  Unarchive
+                  {t.unarchive}
                 </Button>
               )}
               <Button
                 size="sm"
                 variant="danger"
                 onClick={async () => {
-                  if (confirm('Delete this project permanently? This cannot be undone.')) {
+                  if (confirm(t.confirmDelete)) {
                     await deleteMutation.mutateAsync(project.id);
                     refetch();
                   }
                 }}
               >
-                Delete
+                {tAll.common.delete}
               </Button>
             </div>
           </Card>

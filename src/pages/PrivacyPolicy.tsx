@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { setLang, useLang } from '@/lib/lang';
 
 /**
  * Publicly readable — no RequireAuth/RequireGuest wrapper in App.tsx —
@@ -81,9 +82,12 @@ const CONTENT: Record<Lang, Section[]> = {
       heading: '3. Какие данные мы собираем',
       list: [
         '**Данные аккаунта:** email, пароль (хранится в зашифрованном виде Firebase Authentication, мы его не видим).',
-        '**Данные профиля:** имя, возраст, класс, город, школа (по желанию), фото профиля, навыки, интересы, короткое био.',
-        '**Контактные данные (по желанию):** телеграм, GitHub, портфолио, Instagram — вы указываете их сами, они видны другим пользователям после того, как вас приняли в команду.',
-        '**Данные об активности:** время последнего входа, созданные проекты, заявки, сообщения в командных чатах, поданные жалобы.',
+        '**Данные профиля:** имя, возраст, класс, город, школа (по желанию, выбирается из общего справочника или добавляется вами), фото профиля, навыки, интересы, короткое био.',
+        '**Контактные данные (по желанию):** телеграм, GitHub, портфолио, Instagram — вы указываете их сами. Указывайте только то, чем готовы поделиться с другими участниками (см. п. 6).',
+        '**Достижения (по желанию):** название, результат, дата, описание, ссылка и прикреплённый файл (фото диплома или PDF-сертификат). На файле может быть ваше ФИО и школа — загружайте только то, что готовы показать.',
+        '**Данные об активности:** время последнего входа, созданные проекты и их итоги, заявки, приглашения в команды, отметки «Мне интересно» у событий, сообщения в командных чатах, поданные жалобы.',
+        '**Игровые данные:** очки опыта (XP), уровень и значки. Они начисляются автоматически за подтверждённые действия (например, когда вас приняли в команду) и используются для сезонного рейтинга школ.',
+        '**Telegram (по желанию):** если вы подключите Telegram-бота в настройках, мы храним идентификатор чата и ваш username в Telegram, чтобы присылать туда уведомления. Отключить можно в настройках или командой /stop в боте.',
         '**Технические данные:** то, что автоматически собирают наши инфраструктурные провайдеры (см. п. 4), например IP-адрес при обращении к серверу.',
         '**Push-уведомления (по желанию):** если вы включите push-уведомления в настройках, мы храним технический идентификатор вашего устройства (FCM-токен), чтобы присылать уведомления о заявках. Его можно отозвать в любой момент, отключив уведомления или выйдя из аккаунта.',
       ],
@@ -99,6 +103,9 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         '**Google Firebase** (аутентификация, база данных, хостинг, push-уведомления) — [firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)',
         '**ImgBB** (хранение загруженных фото профиля) — [imgbb.com/privacy](https://imgbb.com/privacy)',
+        '**Firebase Storage** (хранение файлов достижений) — входит в Google Firebase, см. выше.',
+        '**Telegram** (доставка уведомлений, если вы подключили бота) — [telegram.org/privacy](https://telegram.org/privacy)',
+        '**Groq** (автоматическая проверка текстов новых проектов и постов «Ищу команду» на недопустимый контент; также разбор публичных постов из Telegram-каналов организаторов для поиска новых событий) — [groq.com/privacy-policy](https://groq.com/privacy-policy/)',
         `**Google (Gmail)** (отправка писем с уведомлениями о заявках и решениях по ним — через обычный Gmail-аккаунт сервиса) — [policies.google.com/privacy](https://policies.google.com/privacy)`,
       ],
     },
@@ -107,17 +114,22 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         'Чтобы вы могли зарегистрироваться и пользоваться сервисом.',
         'Чтобы показывать ваш профиль другим пользователям для поиска команды.',
-        'Чтобы отправлять уведомления о заявках и решениях по ним (по email и, если вы их включили, push).',
+        'Чтобы отправлять уведомления о заявках, решениях по ним и приглашениях в команды (по email, а если вы их включили — push и Telegram).',
+        'Чтобы напоминать о дедлайнах событий, которые вы отметили «Мне интересно».',
+        'Если вы давно не заходили — иногда (не чаще раза в неделю и не больше трёх раз подряд) присылать push или Telegram-сообщение с конкретным поводом: например, в вашу команду пришли заявки или появилась команда под ваши навыки. Только если вы включили push или подключили Telegram; отключается там же.',
+        'Чтобы подбирать проекты и участников под ваши навыки, вести рейтинг школ и собирать ваше портфолио.',
         'Чтобы рассматривать жалобы и поддерживать безопасность платформы (модерация).',
+        'Чтобы видеть общую статистику сервиса (например, сколько человек зарегистрировалось за неделю) — только в виде суммарных чисел, без отслеживания отдельных пользователей.',
       ],
     },
     {
       heading: '6. Кто видит ваши данные',
       list: [
-        '**Имя, город, класс, школа, аватар, био, навыки, интересы** - видны всем зарегистрированным пользователям (профили открыты по замыслу сервиса).',
+        '**Имя, город, класс, школа, аватар, био, навыки, интересы, контакты, достижения (включая прикреплённые файлы), команды, в которых вы состоите, уровень и значки** - видны всем зарегистрированным пользователям (профили открыты по замыслу сервиса).',
+        '**Посетители без аккаунта** видят только события, рейтинг школ (суммарные очки школ) и обезличенные карточки проектов — название, описание, роли, нужные навыки и итог команды, **без имён, фото и состава команды**. Профили им недоступны.',
         '**Email** - виден только вам самим. Другим пользователям он не показывается и не передаётся через интерфейс.',
-        '**Контакты (телеграм и т.д.)** - видны только тем, кого вы приняли в команду.',
         '**Сообщения в командном чате** - видны только участникам конкретной команды.',
+        '**Отметка «Мне интересно»** у события - ваше имя и фото видны зарегистрированным пользователям в списке интересующихся, чтобы можно было найти команду.',
         '**Модераторам** - ограниченный круг лиц с доступом к очереди жалоб видит контент, на который пожаловались, чтобы принять решение.',
       ],
     },
@@ -131,7 +143,7 @@ const CONTENT: Record<Lang, Section[]> = {
       heading: '8. Ваши права',
       paragraphs: ['Вы можете:'],
       list: [
-        'посмотреть и отредактировать большинство своих данных прямо в разделе «Мой профиль»;',
+        'посмотреть и отредактировать большинство своих данных прямо в разделе «Мой профиль», удалить свои достижения, отключить push и Telegram;',
         'запросить у нас копию своих данных;',
         `попросить исправить или удалить данные, написав на [${EMAIL}](mailto:${EMAIL}).`,
       ],
@@ -168,9 +180,12 @@ const CONTENT: Record<Lang, Section[]> = {
       heading: '3. What data we collect',
       list: [
         '**Account data:** email, password (stored encrypted by Firebase Authentication — we never see it).',
-        '**Profile data:** name, age, grade, city, school (optional), profile photo, skills, interests, short bio.',
-        "**Contact details (optional):** Telegram, GitHub, portfolio, Instagram — you provide these yourself; they become visible to other users once you accept them onto a team.",
-        '**Activity data:** last active time, created projects, applications, messages in team chats, submitted reports.',
+        '**Profile data:** name, age, grade, city, school (optional; picked from a shared directory or added by you), profile photo, skills, interests, short bio.',
+        '**Contact details (optional):** Telegram, GitHub, portfolio, Instagram — you provide these yourself. Only add what you are comfortable sharing with other members (see section 6).',
+        '**Achievements (optional):** title, result, date, description, link and an attached file (a photo of a diploma or a PDF certificate). A file may show your full name and school — only upload what you are happy to show.',
+        '**Activity data:** last active time, created projects and their results, applications, team invites, "interested" marks on events, messages in team chats, submitted reports.',
+        '**Game data:** experience points (XP), level and badges. Granted automatically for confirmed actions (e.g. being accepted onto a team) and used for the seasonal school leaderboard.',
+        '**Telegram (optional):** if you connect the Telegram bot in Settings, we store your chat ID and Telegram username to send notifications there. Disconnect in Settings or with /stop in the bot.',
         '**Technical data:** whatever our infrastructure providers automatically collect (see section 4), e.g. IP address when contacting the server.',
         '**Push notifications (optional):** if you turn on push notifications in Settings, we store a technical device identifier (an FCM token) so we can send you application-related notifications. You can revoke this at any time by disabling notifications or signing out.',
       ],
@@ -184,6 +199,9 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         '**Google Firebase** (authentication, database, hosting, push notifications) — [firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)',
         '**ImgBB** (storage of uploaded profile photos) — [imgbb.com/privacy](https://imgbb.com/privacy)',
+        '**Firebase Storage** (storage of achievement files) — part of Google Firebase, see above.',
+        '**Telegram** (delivering notifications if you connected the bot) — [telegram.org/privacy](https://telegram.org/privacy)',
+        '**Groq** (automatic screening of new project and "looking for team" texts for harmful content; also reading public posts from organizers\' Telegram channels to find new events) — [groq.com/privacy-policy](https://groq.com/privacy-policy/)',
         "**Google (Gmail)** (sending application/decision notification emails, via the service's regular Gmail account) — [policies.google.com/privacy](https://policies.google.com/privacy)",
       ],
     },
@@ -192,17 +210,22 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         'So you can register and use the service.',
         'To show your profile to other users so they can find you for a team.',
-        'To send notifications about applications and decisions on them (by email, and by push if you enabled it).',
+        'To send notifications about applications, decisions on them and team invites (by email, and by push and Telegram if you enabled them).',
+        'To remind you about deadlines of events you marked as interested.',
+        'If you have not visited for a while — occasionally (at most once a week and three times in a row) send a push or Telegram message with a concrete reason, e.g. applications waiting on your team or a new team that needs your skills. Only if you enabled push or connected Telegram; turn it off in the same place.',
+        'To match projects and teammates to your skills, run the school leaderboard and build your portfolio.',
         'To review reports and keep the platform safe (moderation).',
+        'To see overall service statistics (e.g. how many people signed up this week) — as totals only, without tracking individual users.',
       ],
     },
     {
       heading: '6. Who sees your data',
       list: [
-        '**Name, city, grade, school, avatar, bio, skills, interests** - visible to all registered users (profiles are open by design).',
+        '**Name, city, grade, school, avatar, bio, skills, interests, contacts, achievements (including attached files), the teams you are on, level and badges** - visible to all registered users (profiles are open by design).',
+        '**Visitors without an account** only see events, the school leaderboard (school point totals) and anonymized project cards — title, description, roles, required skills and the team result, **with no names, photos or team members**. Profiles are not available to them.',
         '**Email** - visible only to you. It is never shown to other users or exposed through the interface.',
-        '**Contacts (Telegram, etc.)** - visible only to people you have accepted onto a team.',
         "**Team chat messages** - visible only to that team's members.",
+        '**An "interested" mark** on an event - your name and photo are visible to registered users in the list of interested people, so teams can find each other.',
         '**Moderators** - a limited set of people with access to the report queue can see reported content in order to make a decision.',
       ],
     },
@@ -216,7 +239,7 @@ const CONTENT: Record<Lang, Section[]> = {
       heading: '8. Your rights',
       paragraphs: ['You can:'],
       list: [
-        'view and edit most of your data directly in "My Profile";',
+        'view and edit most of your data directly in "My Profile", delete your achievements, turn off push and Telegram;',
         'request a copy of your data from us;',
         `ask us to correct or delete data by emailing [${EMAIL}](mailto:${EMAIL}).`,
       ],
@@ -253,9 +276,12 @@ const CONTENT: Record<Lang, Section[]> = {
       heading: '3. Біз қандай деректерді жинаймыз',
       list: [
         '**Аккаунт деректері:** email, құпия сөз (Firebase Authentication шифрланған түрде сақтайды, біз оны көрмейміз).',
-        '**Профиль деректері:** аты-жөні, жасы, сынып, қала, мектеп (қалауыңызша), профиль фотосы, дағдылар, қызығушылықтар, қысқаша био.',
-        '**Байланыс деректері (қалауыңызша):** telegram, GitHub, портфолио, Instagram — оларды өзіңіз көрсетесіз, сізді командаға қабылдағаннан кейін басқа пайдаланушыларға көрінеді.',
-        '**Белсенділік деректері:** соңғы кіру уақыты, құрылған жобалар, өтінімдер, команда чатындағы хабарламалар, жіберілген шағымдар.',
+        '**Профиль деректері:** аты-жөні, жасы, сынып, қала, мектеп (қалауыңызша; ортақ анықтамалықтан таңдалады немесе өзіңіз қосасыз), профиль фотосы, дағдылар, қызығушылықтар, қысқаша био.',
+        '**Байланыс деректері (қалауыңызша):** telegram, GitHub, портфолио, Instagram — оларды өзіңіз көрсетесіз. Басқа қатысушылармен бөлісуге дайын нәрсені ғана көрсетіңіз (6-бөлімді қараңыз).',
+        '**Жетістіктер (қалауыңызша):** атауы, нәтижесі, күні, сипаттамасы, сілтеме және тіркелген файл (диплом фотосы немесе PDF-сертификат). Файлда аты-жөніңіз бен мектебіңіз болуы мүмкін — көрсетуге дайын нәрсені ғана жүктеңіз.',
+        '**Белсенділік деректері:** соңғы кіру уақыты, құрылған жобалар мен олардың нәтижелері, өтінімдер, командаға шақырулар, іс-шаралардағы «Маған қызық» белгілері, команда чатындағы хабарламалар, жіберілген шағымдар.',
+        '**Ойын деректері:** тәжірибе ұпайлары (XP), деңгей және белгілер. Расталған әрекеттер үшін автоматты түрде беріледі (мысалы, сізді командаға қабылдағанда) және мектептердің маусымдық рейтингінде қолданылады.',
+        '**Telegram (қалауыңызша):** баптауларда Telegram-ботты қоссаңыз, хабарлама жіберу үшін чат идентификаторы мен Telegram username-іңізді сақтаймыз. Баптауларда немесе боттағы /stop командасымен ажыратуға болады.',
         '**Техникалық деректер:** біздің инфрақұрылым провайдерлері автоматты түрде жинайтын деректер (4-бөлімді қараңыз), мысалы, серверге жүгінгендегі IP-мекенжай.',
         '**Push-хабарландырулар (қалауыңызша):** параметрлерде push-хабарландыруларды қоссаңыз, өтінімдер туралы хабарлама жіберу үшін құрылғыңыздың техникалық идентификаторын (FCM-токен) сақтаймыз. Оны кез келген уақытта хабарландыруларды өшіру немесе аккаунттан шығу арқылы алып тастауға болады.',
       ],
@@ -271,6 +297,9 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         '**Google Firebase** (аутентификация, дерекқор, хостинг, push-хабарландырулар) — [firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)',
         '**ImgBB** (жүктелген профиль фотоларын сақтау) — [imgbb.com/privacy](https://imgbb.com/privacy)',
+        '**Firebase Storage** (жетістік файлдарын сақтау) — Google Firebase құрамында, жоғарыны қараңыз.',
+        '**Telegram** (ботты қоссаңыз, хабарламаларды жеткізу) — [telegram.org/privacy](https://telegram.org/privacy)',
+        '**Groq** (жаңа жобалар мен «Команда іздеймін» мәтіндерін орынсыз мазмұнға автоматты тексеру; сондай-ақ жаңа іс-шараларды табу үшін ұйымдастырушылардың ашық Telegram-арналарындағы жазбаларды талдау) — [groq.com/privacy-policy](https://groq.com/privacy-policy/)',
         '**Google (Gmail)** (өтінімдер мен шешімдер туралы хабарлама хаттарын жіберу — қызметтің әдеттегі Gmail аккаунты арқылы) — [policies.google.com/privacy](https://policies.google.com/privacy)',
       ],
     },
@@ -279,17 +308,22 @@ const CONTENT: Record<Lang, Section[]> = {
       list: [
         'Тіркеліп, қызметті пайдалана алуыңыз үшін.',
         'Профиліңізді басқа пайдаланушыларға команда іздеу үшін көрсету үшін.',
-        'Өтінімдер мен олар бойынша шешімдер туралы хабарлама жіберу үшін (email арқылы, ал қоссаңыз - push арқылы да).',
+        'Өтінімдер, олар бойынша шешімдер және командаға шақырулар туралы хабарлама жіберу үшін (email арқылы, ал қоссаңыз - push және Telegram арқылы да).',
+        '«Маған қызық» деп белгілеген іс-шаралардың мерзімдерін еске салу үшін.',
+        'Ұзақ уақыт кірмесеңіз — кейде (аптасына бір реттен жиі емес және қатарынан үш реттен көп емес) нақты себеппен push немесе Telegram-хабарлама жіберу үшін: мысалы, командаңызға өтінімдер келді немесе дағдыларыңызға сай команда пайда болды. Тек push қосылған немесе Telegram жалғанған болса; сол жерде өшіріледі.',
+        'Дағдыларыңызға сай жобалар мен қатысушыларды таңдау, мектептер рейтингін жүргізу және портфолиоңызды жинау үшін.',
         'Шағымдарды қарау және платформаның қауіпсіздігін қамтамасыз ету үшін (модерация).',
+        'Қызметтің жалпы статистикасын көру үшін (мысалы, аптада қанша адам тіркелгені) — тек жиынтық сандар түрінде, жеке пайдаланушыларды бақыламай.',
       ],
     },
     {
       heading: '6. Деректеріңізді кім көреді',
       list: [
-        '**Аты-жөні, қала, сынып, мектеп, аватар, био, дағдылар, қызығушылықтар** - барлық тіркелген пайдаланушыларға көрінеді (профильдер қызметтің тұжырымдамасы бойынша ашық).',
+        '**Аты-жөні, қала, сынып, мектеп, аватар, био, дағдылар, қызығушылықтар, байланыстар, жетістіктер (тіркелген файлдарды қоса), сіз мүше командалар, деңгей мен белгілер** - барлық тіркелген пайдаланушыларға көрінеді (профильдер қызметтің тұжырымдамасы бойынша ашық).',
+        '**Аккаунтсыз келушілер** тек іс-шараларды, мектептер рейтингін (мектептердің жиынтық ұпайлары) және иесіздендірілген жоба карточкаларын көреді — атауы, сипаттамасы, рөлдері, қажетті дағдылар және команда нәтижесі, **аттарсыз, фотосыз және команда құрамынсыз**. Профильдер оларға қолжетімсіз.',
         '**Email** - тек өзіңізге көрінеді. Басқа пайдаланушыларға көрсетілмейді және интерфейс арқылы берілмейді.',
-        '**Байланыстар (telegram және т.б.)** - тек сіз командаға қабылдаған адамдарға көрінеді.',
         '**Команда чатындағы хабарламалар** - тек сол команданың қатысушыларына көрінеді.',
+        '**Іс-шарадағы «Маған қызық» белгісі** - команда табу үшін атыңыз бен фотоңыз қызығушылық танытқандар тізімінде тіркелген пайдаланушыларға көрінеді.',
         '**Модераторларға** - шағымдар кезегіне қолжетімділігі бар шектеулі топ шешім қабылдау үшін шағым берілген контентті көреді.',
       ],
     },
@@ -303,7 +337,7 @@ const CONTENT: Record<Lang, Section[]> = {
       heading: '8. Сіздің құқықтарыңыз',
       paragraphs: ['Сіз мыналарды жасай аласыз:'],
       list: [
-        'деректеріңіздің көбін тікелей «Менің профилім» бөлімінде көру және өзгерту;',
+        'деректеріңіздің көбін тікелей «Менің профилім» бөлімінде көру және өзгерту, жетістіктеріңізді жою, push пен Telegram-ды өшіру;',
         'бізден деректеріңіздің көшірмесін сұрау;',
         `[${EMAIL}](mailto:${EMAIL}) мекенжайына жазып, деректерді түзетуді немесе жоюды сұрау.`,
       ],
@@ -325,10 +359,12 @@ const CONTENT: Record<Lang, Section[]> = {
   ],
 };
 
-const UPDATED_DATE = '14.07.2026';
+const UPDATED_DATE = '27.09.2026';
 
 export default function PrivacyPolicy() {
-  const [lang, setLang] = useState<Lang>('ru');
+  // Opens in whatever language the visitor already picked on the landing /
+  // sign-up page; switching here updates that shared choice too.
+  const lang = useLang();
   const t = UI[lang];
 
   return (

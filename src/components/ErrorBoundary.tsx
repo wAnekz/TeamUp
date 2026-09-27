@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { FeedbackButton } from '@/components/FeedbackButton';
+import { getT } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -39,24 +40,24 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children;
 
     const errorContext = `Crash: ${this.state.error.message}\nPage: ${window.location.pathname}`;
+    // Class component — no hooks, so read the current language directly.
+    const t = getT();
 
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-surface-50 px-6 text-center">
         <div className="max-w-sm space-y-3 rounded-2xl border border-surface-200 bg-white p-7 shadow-card">
-          <h1 className="text-lg font-semibold text-surface-900">Something went wrong</h1>
-          <p className="text-sm text-surface-500">
-            This page hit an unexpected error. Reloading usually fixes it - your data is safe either way.
-          </p>
+          <h1 className="text-lg font-semibold text-surface-900">{t.errors.title}</h1>
+          <p className="text-sm text-surface-500">{t.errors.text}</p>
           <button
             type="button"
             onClick={() => window.location.reload()}
             className="mt-2 inline-flex h-10 w-full items-center justify-center rounded-xl bg-accent-600 px-4 text-sm font-medium text-white transition-colors hover:bg-accent-700"
           >
-            Reload page
+            {t.errors.reload}
           </button>
           <FeedbackButton
             initialMessage={errorContext}
-            label="Let the developer know"
+            label={t.feedback.letKnow}
             variant="secondary"
             className="w-full"
           />

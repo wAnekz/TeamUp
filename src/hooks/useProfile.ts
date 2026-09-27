@@ -3,6 +3,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import imageCompression from 'browser-image-compression';
 import { db } from '@/lib/firebase';
 import type { UserProfile } from '@/types';
+import { getT } from '@/i18n';
 
 export function useUpdateProfile(uid: string | undefined) {
   const qc = useQueryClient();
@@ -52,9 +53,9 @@ export async function uploadAvatar(_uid: string, file: File): Promise<string> {
     body: formData,
   });
 
-  if (!res.ok) throw new Error('Image upload failed');
+  if (!res.ok) throw new Error(getT().errors.uploadFailed);
   const data = await res.json();
-  if (!data.success) throw new Error(data.error?.message ?? 'Image upload failed');
+  if (!data.success) throw new Error(data.error?.message ?? getT().errors.uploadFailed);
 
   return data.data.url as string;
 }

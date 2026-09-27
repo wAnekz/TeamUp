@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProjectChat, sendProjectMessage } from '@/hooks/useChat';
 import { blockUser, unblockUser, useBlockedUserIds } from '@/hooks/useBlockedUsers';
 import { cn } from '@/utils/cn';
+import { useT } from '@/i18n';
 
 const MAX_LENGTH = 1000;
 
@@ -16,6 +17,7 @@ function messageTime(ts: Timestamp | undefined) {
 
 export function TeamChat({ projectId, enabled }: { projectId: string; enabled: boolean }) {
   const { user, profile } = useAuth();
+  const t = useT().chat;
   const { messages: allMessages, loading, error } = useProjectChat(projectId, enabled);
   const blockedIds = useBlockedUserIds();
   const [text, setText] = useState('');
@@ -36,7 +38,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
     // Confirm before blocking, same pattern as the moderator "ban" action
     // in Reports.tsx — this hides them everywhere you'd see their
     // messages, so worth a beat before committing to it.
-    if (confirm(`Hide messages from ${authorName}? You can undo this any time - they won't be notified.`)) {
+    if (confirm(t.confirmBlock(authorName))) {
       blockUser(user.uid, authorId);
     }
   };
@@ -82,14 +84,14 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
 
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold text-surface-900">Team chat</h2>
+      <h2 className="mb-3 text-lg font-semibold text-surface-900">{t.title}</h2>
       <div className="flex flex-col overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-card">
         <div className="max-h-96 min-h-[220px] space-y-3 overflow-y-auto p-4">
           {error && (
             <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-              <p>Couldn't load chat - you may no longer have access to this team's messages.</p>
+              <p>{t.loadError}</p>
               <button type="button" onClick={() => window.location.reload()} className="mt-1 font-medium underline">
-                Reload
+                {t.reload}
               </button>
             </div>
           )}
@@ -100,7 +102,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
             </div>
           )}
           {!loading && !error && messages.length === 0 && hiddenCount === 0 && (
-            <p className="text-center text-sm text-surface-400">No messages yet - say hi to your team.</p>
+            <p className="text-center text-sm text-surface-400">{t.empty}</p>
           )}
           {hiddenCount > 0 && (
             <button
@@ -108,9 +110,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
               onClick={() => setShowBlocked((v) => !v)}
               className="w-full rounded-xl border border-dashed border-surface-200 py-1.5 text-center text-xs text-surface-400 hover:text-surface-600"
             >
-              {showBlocked
-                ? 'Hide messages from blocked users again'
-                : `${hiddenCount} message${hiddenCount === 1 ? '' : 's'} hidden from users you blocked - show`}
+              {showBlocked ? t.hideBlocked : t.hiddenCount(hiddenCount)}
             </button>
           )}
           {messages.map((m) => {
@@ -136,8 +136,8 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
                   <button
                     type="button"
                     onClick={() => toggleBlock(m.authorId, m.authorName)}
-                    aria-label={isBlocked ? `Unblock ${m.authorName}` : `Block ${m.authorName}`}
-                    title={isBlocked ? `Unblock ${m.authorName}` : `Hide messages from ${m.authorName}`}
+                    aria-label={isBlocked ? t.unblock(m.authorName) : t.block(m.authorName)}
+                    title={isBlocked ? t.unblock(m.authorName) : t.block(m.authorName)}
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-surface-300 opacity-0 transition hover:bg-surface-100 hover:text-surface-600 group-hover:opacity-100"
                   >
                     {isBlocked ? <UserCheck size={14} /> : <UserX size={14} />}
@@ -150,7 +150,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
         </div>
         {sendError && (
           <p className="border-t border-surface-100 bg-red-50 px-4 py-1.5 text-xs text-red-600">
-            Message didn't send - check your connection and try again.
+            {t.sendFailed}
           </p>
         )}
         <div className="flex items-center gap-2 border-t border-surface-100 p-3">
@@ -163,14 +163,14 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
                 send();
               }
             }}
-            placeholder="Message your team..."
+            placeholder={t.placeholder}
             className="flex-1 rounded-xl border border-surface-200 px-3.5 py-2 text-sm focus:border-accent-500"
           />
           <button
             type="button"
             onClick={send}
             disabled={!text.trim() || sending}
-            aria-label="Send message"
+            aria-label={t.send}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-600 text-white disabled:opacity-40"
           >
             <Send size={16} />

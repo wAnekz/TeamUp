@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/utils/cn';
-import { DeadlineWidget } from '@/components/dashboard/DeadlineWidget';
+import { DeadlineWidget, SchoolRankCard } from '@/components/dashboard/DeadlineWidget';
+import { useT } from '@/i18n';
 
 // Only one tab is ever visible at a time, so each is its own chunk rather
 // than all four (MyProfile especially — form + validation + avatar upload
@@ -19,21 +20,23 @@ function TabLoader() {
   );
 }
 
-const TABS = [
-  { key: 'projects', label: 'My Projects' },
-  { key: 'applications', label: 'My Applications' },
-  { key: 'profile', label: 'My Profile' },
-  { key: 'drafts', label: 'Drafts' },
-] as const;
 
 export default function Dashboard() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') ?? 'projects';
+  const t = useT().dashboard;
+  const TABS = [
+    { key: 'projects', label: t.tabProjects },
+    { key: 'applications', label: t.tabApplications },
+    { key: 'profile', label: t.tabProfile },
+    { key: 'drafts', label: t.tabDrafts },
+  ];
 
   return (
     <div>
-      <h1 className="mb-4 text-xl font-bold text-surface-900">Dashboard</h1>
+      <h1 className="mb-4 text-xl font-bold text-surface-900">{t.title}</h1>
       <DeadlineWidget />
+      <SchoolRankCard />
       <div className="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-surface-100 p-1 scrollbar-none">
         {TABS.map((t) => (
           <button

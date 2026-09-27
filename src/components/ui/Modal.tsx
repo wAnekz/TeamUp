@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useT } from '@/i18n';
 
 export function Modal({
   open,
@@ -14,6 +15,7 @@ export function Modal({
   title: string;
   children: ReactNode;
 }) {
+  const t = useT();
   return createPortal(
     <AnimatePresence>
       {open && (
@@ -51,7 +53,7 @@ export function Modal({
                 <h2 className="text-lg font-semibold text-surface-900">{title}</h2>
                 <button
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label={t.common.close}
                   className="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
                 >
                   <X size={18} />

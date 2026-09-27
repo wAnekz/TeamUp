@@ -2,6 +2,7 @@ import { Search } from 'lucide-react';
 import { CategorizedTagPicker } from '@/components/ui/CategorizedTagPicker';
 import { SKILL_CATEGORIES, INTEREST_CATEGORIES } from '@/constants/options';
 import type { ProjectFilters, ProjectType } from '@/types';
+import { useT } from '@/i18n';
 
 export function ProjectFilterPanel({
   filters,
@@ -10,6 +11,7 @@ export function ProjectFilterPanel({
   filters: ProjectFilters;
   onChange: (next: ProjectFilters) => void;
 }) {
+  const t = useT();
   return (
     <div className="space-y-5 rounded-2xl border border-surface-200 bg-white p-4">
       <label className="relative block">
@@ -17,21 +19,21 @@ export function ProjectFilterPanel({
         <input
           value={filters.search ?? ''}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          placeholder="Search projects..."
+          placeholder={t.feed.searchProjects}
           className="w-full rounded-xl border border-surface-200 bg-surface-50 py-2.5 pl-9 pr-3 text-sm focus:border-accent-500"
         />
       </label>
 
       <div className="flex gap-2">
-        {(['event', 'ongoing'] as ProjectType[]).map((t) => (
+        {(['event', 'ongoing'] as ProjectType[]).map((type) => (
           <button
-            key={t}
-            onClick={() => onChange({ ...filters, type: filters.type === t ? undefined : t })}
+            key={type}
+            onClick={() => onChange({ ...filters, type: filters.type === type ? undefined : type })}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-              filters.type === t ? 'bg-accent-600 text-white' : 'bg-surface-100 text-surface-600'
+              filters.type === type ? 'bg-accent-600 text-white' : 'bg-surface-100 text-surface-600'
             }`}
           >
-            {t === 'event' ? 'Event' : 'Ongoing'}
+            {type === 'event' ? t.status.event : t.status.ongoing}
           </button>
         ))}
         <button
@@ -40,14 +42,14 @@ export function ProjectFilterPanel({
             filters.onlyOpenSlots ? 'bg-accent-600 text-white' : 'bg-surface-100 text-surface-600'
           }`}
         >
-          Open slots only
+          {t.feed.openSlotsOnly}
         </button>
       </div>
 
       <CategorizedTagPicker
-        label="Skills"
+        label={t.feed.skills}
+        kind="skill"
         categories={SKILL_CATEGORIES}
-        searchPlaceholder="Search skills..."
         selected={filters.skills}
         onToggle={(skill) =>
           onChange({
@@ -58,7 +60,7 @@ export function ProjectFilterPanel({
       />
 
       <CategorizedTagPicker
-        label="Interests"
+        label={t.feed.interests}
         categories={INTEREST_CATEGORIES}
         selected={filters.interests}
         onToggle={(interest) =>

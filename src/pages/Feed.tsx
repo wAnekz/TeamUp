@@ -4,25 +4,40 @@ import { useSavedProjectsFeed } from '@/hooks/useSavedProjects';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { ProjectFilterPanel } from '@/components/projects/ProjectFilterPanel';
 import { ErrorState, Skeleton } from '@/components/ui/primitives';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { GettingStarted } from '@/components/onboarding/GettingStarted';
+import { Button } from '@/components/ui/Button';
+import { useT } from '@/i18n';
 import { rankByMatch } from '@/utils/match';
 import { cn } from '@/utils/cn';
 import type { FeedView, ProjectFilters } from '@/types';
 
 const EMPTY_FILTERS: ProjectFilters = { skills: [], interests: [] };
 
-const VIEW_TABS: { key: FeedView; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'recommended', label: 'Recommended for you' },
-  { key: 'saved', label: 'Saved' },
-];
 
 export default function Feed() {
   const { user, profile } = useAuth();
   const [view, setView] = useState<FeedView>('all');
   const [filters, setFilters] = useState<ProjectFilters>(EMPTY_FILTERS);
-  const { data, isLoading, isError, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useProjectFeed(filters);
-  const { data: pool, isLoading: loadingPool, isError: poolError, error: poolErrorObj, refetch: refetchPool } = useRecommendationPool();
+  const isGuest = !user;
+  const t = useT().feed;
+  const VIEW_TABS: { key: FeedView; label: string }[] = [
+    { key: 'all', label: t.tabAll },
+    { key: 'recommended', label: t.tabRecommended },
+    { key: 'saved', label: t.tabSaved },
+  ];
+  const { data, isLoading, isError, error, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useProjectFeed(
+    filters,
+    isGuest,
+  );
+  const {
+    data: pool,
+    isLoading: loadingPool,
+    isError: poolError,
+    error: poolErrorObj,
+    refetch: refetchPool,
+  } = useRecommendationPool(isGuest);
   const {
     data: saved,
     isLoading: loadingSaved,
@@ -55,11 +70,29 @@ export default function Feed() {
       </aside>
 
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-surface-900">Projects & teams</h1>
+        {!isGuest && <GettingStarted />}
+
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h1 className="text-xl font-bold text-surface-900">{t.title}</h1>
+          {!isGuest && (
+            <Link to="/projects/new">
+              <Button size="sm">{t.startProject}</Button>
+            </Link>
+          )}
         </div>
 
-        <div className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-surface-100 p-1 scrollbar-none">
+        {isGuest && (
+          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm text-accent-900">{t.guestBanner}</p>
+            <Link to="/login?mode=signup" className="shrink-0">
+              <Button size="sm">{t.signUpFree}</Button>
+            </Link>
+          </div>
+        )}
+
+        <div
+          className={cn('mb-4 flex gap-1 overflow-x-auto rounded-xl bg-surface-100 p-1 scrollbar-none', isGuest && 'hidden')}
+        >
           {VIEW_TABS.map((t) => (
             <button
               key={t.key}
@@ -88,7 +121,12 @@ export default function Feed() {
 
             {!isLoading && !isError && projects.length === 0 && (
               <div className="rounded-2xl border border-dashed border-surface-300 py-16 text-center text-surface-500">
-                No projects match yet. Try widening your filters, or be the first to post one.
+                <p>{t.empty}</p>
+                {!isGuest && (
+                  <Link to="/projects/new" className="mt-4 inline-block">
+                    <Button size="sm">{t.startProject}</Button>
+                  </Link>
+                )}
               </div>
             )}
 
@@ -99,7 +137,7 @@ export default function Feed() {
             </div>
 
             <div ref={sentinelRef} className="h-10" />
-            {isFetchingNextPage && <p className="text-center text-sm text-surface-400">Loading more...</p>}
+            {isFetchingNextPage && <p className="text-center text-sm text-surface-400">{t.loadingMore}</p>}
           </>
         )}
 
@@ -115,7 +153,7 @@ export default function Feed() {
             )}
             {!loadingPool && !poolError && recommendations.length === 0 && (
               <div className="rounded-2xl border border-dashed border-surface-300 py-16 text-center text-surface-500">
-                No strong matches yet - add more skills and interests to your profile to improve recommendations.
+                {t.noMatches}
               </div>
             )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -138,7 +176,7 @@ export default function Feed() {
             )}
             {!loadingSaved && !savedError && (!saved || saved.length === 0) && (
               <div className="rounded-2xl border border-dashed border-surface-300 py-16 text-center text-surface-500">
-                You haven't saved any projects yet. Tap the star on a project to save it here.
+                {t.noSaved}
               </div>
             )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

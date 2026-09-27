@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubmitFeedback } from '@/hooks/useFeedback';
 import { toast, errorToMessage } from '@/lib/toast';
 import { cn } from '@/utils/cn';
+import { useT } from '@/i18n';
 
 /**
  * Global "tell the developer something's wrong" entry point — separate from
@@ -17,7 +18,7 @@ import { cn } from '@/utils/cn';
  */
 export function FeedbackButton({
   initialMessage = '',
-  label = 'Report an issue',
+  label,
   variant = 'ghost',
   className,
 }: {
@@ -27,6 +28,8 @@ export function FeedbackButton({
   className?: string;
 }) {
   const { user } = useAuth();
+  const tAll = useT();
+  const t = tAll.feedback;
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState(initialMessage);
   const [sent, setSent] = useState(false);
@@ -49,7 +52,7 @@ export function FeedbackButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title={variant === 'icon' ? 'Report an issue' : undefined}
+        title={variant === 'icon' ? t.label : undefined}
         className={cn(
           variant === 'secondary'
             ? 'inline-flex items-center justify-center gap-1.5 rounded-xl border border-surface-200 bg-white px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-100'
@@ -60,7 +63,7 @@ export function FeedbackButton({
         )}
       >
         <MessageCircleWarning size={variant === 'secondary' ? 16 : variant === 'icon' ? 18 : 13} />
-        {variant !== 'icon' && label}
+        {variant !== 'icon' && (label ?? t.label)}
       </button>
       <Modal
         open={open}
@@ -69,28 +72,23 @@ export function FeedbackButton({
           setSent(false);
           setMessage(initialMessage);
         }}
-        title={sent ? 'Thanks!' : 'Report an issue'}
+        title={sent ? t.thanks : t.label}
       >
         {sent ? (
-          <p className="text-sm text-surface-600">
-            Sent straight to the developer. Nothing more needed on your end - thanks for the heads up.
-          </p>
+          <p className="text-sm text-surface-600">{t.sent}</p>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-surface-500">
-              Found a bug, or something looks broken? Describe it below - this goes directly to the person building
-              TeamUp, not to a support queue.
-            </p>
+            <p className="text-sm text-surface-500">{t.text}</p>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={5}
               maxLength={2000}
-              placeholder="What happened, and what were you trying to do?"
+              placeholder={t.placeholder}
               className="w-full resize-none rounded-xl border border-surface-200 p-3 text-sm text-surface-900 outline-none focus:border-accent-400"
             />
             <Button className="w-full" onClick={submit} disabled={!message.trim()} loading={isPending}>
-              Send
+              {tAll.common.send}
             </Button>
           </div>
         )}

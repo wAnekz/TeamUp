@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { interestLabel, skillLabel, translateError, useT } from '@/i18n';
 
 // Same selection UX as TagPicker (pill buttons, toggle on click), but for
 // lists too long to dump flat on screen — grouped into collapsible
@@ -11,9 +12,10 @@ export function CategorizedTagPicker<T extends string>({
   selected,
   onToggle,
   label,
-  error,
+  error: rawError,
   name,
   searchPlaceholder,
+  kind = 'interest',
 }: {
   categories: Record<string, readonly T[]>;
   selected: T[];
@@ -22,7 +24,14 @@ export function CategorizedTagPicker<T extends string>({
   error?: string;
   name?: string;
   searchPlaceholder?: string;
+  // Which dictionary labels come from. Stored values never change — only
+  // what's shown (and searched) is translated.
+  kind?: 'skill' | 'interest';
 }) {
+  const t = useT();
+  const labelOf = (v: T) => (kind === 'skill' ? skillLabel(t, v) : interestLabel(t, v));
+  const categoryLabel = (c: string) => (kind === 'skill' ? t.skillCategories[c] : t.interestCategories[c]) ?? c;
+  const error = translateError(t, rawError);
   const [query, setQuery] = useState('');
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
 
@@ -31,11 +40,14 @@ export function CategorizedTagPicker<T extends string>({
     if (!q) return categories;
     const result: Record<string, T[]> = {};
     for (const [category, options] of Object.entries(categories)) {
-      const matches = options.filter((o) => o.toLowerCase().includes(q));
+      // Match the shown label and the stored value, so "football" and
+      // "футбол" both find it whatever the UI language.
+      const matches = options.filter((o) => o.toLowerCase().includes(q) || labelOf(o).toLowerCase().includes(q));
       if (matches.length > 0) result[category] = matches;
     }
     return result;
-  }, [categories, query]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, query, t]);
 
   const isSearching = query.trim().length > 0;
 
@@ -61,7 +73,7 @@ export function CategorizedTagPicker<T extends string>({
               onClick={() => onToggle(s)}
               className="rounded-full border border-accent-600 bg-accent-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-700"
             >
-              {s} ×
+              {labelOf(s)} ×
             </button>
           ))}
         </div>
@@ -72,7 +84,7 @@ export function CategorizedTagPicker<T extends string>({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={searchPlaceholder ?? 'Search interests...'}
+          placeholder={searchPlaceholder ?? (kind === 'skill' ? t.picker.searchSkills : t.picker.searchInterests)}
           className="w-full rounded-xl border border-surface-200 py-2 pl-9 pr-3 text-sm focus:border-accent-500"
         />
       </div>
@@ -89,7 +101,7 @@ export function CategorizedTagPicker<T extends string>({
                 className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm font-medium text-surface-700 hover:bg-surface-50"
               >
                 <span>
-                  {category}
+                  {categoryLabel(category)}
                   {selectedInCategory > 0 && <span className="ml-1.5 text-xs font-normal text-accent-600">({selectedInCategory})</span>}
                 </span>
                 <ChevronDown size={14} className={cn('text-surface-400 transition-transform', open && 'rotate-180')} />
@@ -110,7 +122,7 @@ export function CategorizedTagPicker<T extends string>({
                             : 'border-surface-200 bg-white text-surface-600 hover:border-accent-300 hover:text-accent-700',
                         )}
                       >
-                        {opt}
+                        {labelOf(opt)}
                       </button>
                     );
                   })}
@@ -119,7 +131,7 @@ export function CategorizedTagPicker<T extends string>({
             </div>
           );
         })}
-        {Object.keys(filtered).length === 0 && <p className="px-2 py-3 text-center text-sm text-surface-400">No matches.</p>}
+        {Object.keys(filtered).length === 0 && <p className="px-2 py-3 text-center text-sm text-surface-400">{t.picker.noMatches}</p>}
       </div>
 
       {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}

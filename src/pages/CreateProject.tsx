@@ -16,6 +16,7 @@ import type { Skill, Interest, ProjectRole } from '@/types';
 import { nanoid } from '@/utils/id';
 import { scrollToFirstError } from '@/utils/formErrors';
 import { toast } from '@/lib/toast';
+import { translateError, useT } from '@/i18n';
 
 export default function CreateProject() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,8 @@ export default function CreateProject() {
   const createMutation = useCreateProject();
   const updateMutation = useUpdateProject();
   const { data: existing, isLoading: loadingExisting } = useProject(id);
+  const tAll = useT();
+  const t = tAll.create;
 
   const {
     register,
@@ -98,7 +101,7 @@ export default function CreateProject() {
           isDraft,
         },
       });
-      toast.success('Changes saved');
+      toast.success(t.saved);
       navigate(`/projects/${existing.id}`);
       return;
       }
@@ -126,12 +129,12 @@ export default function CreateProject() {
         authorAvatarUrl: profile.avatarUrl ?? null,
         isDraft,
       });
-      toast.success(isDraft ? 'Saved as draft' : 'Project published');
+      toast.success(isDraft ? t.savedDraft : t.published);
       navigate(isDraft ? '/dashboard?tab=drafts' : `/projects/${newId}`);
     } catch (e) {
       // Previously this threw silently past handleSubmit with no feedback —
       // button just stopped spinning and nothing happened. Now it's visible.
-      setServerError(e instanceof Error ? e.message : 'Could not save your project. Please try again.');
+      setServerError(e instanceof Error ? e.message : t.couldNotSave);
     }
   };
 
@@ -145,18 +148,18 @@ export default function CreateProject() {
   }
 
   if (isEditing && existing && user?.uid !== existing.authorId) {
-    return <p className="text-center text-surface-500">You can only edit your own projects.</p>;
+    return <p className="text-center text-surface-500">{t.notYours}</p>;
   }
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold text-surface-900">{isEditing ? 'Edit project' : 'Create a project'}</h1>
+      <h1 className="mb-6 text-2xl font-bold text-surface-900">{isEditing ? t.editTitle : t.createTitle}</h1>
 
       <form className="space-y-5">
-        <Input label="Title" placeholder="AI-powered study planner" {...register('title')} error={errors.title?.message} />
+        <Input label={t.title} placeholder={t.titlePlaceholder} {...register('title')} error={errors.title?.message} />
         <Textarea
-          label="Description"
-          placeholder="What are you building, and what does the team look like?"
+          label={t.description}
+          placeholder={t.descPlaceholder}
           maxLength={500}
           value={description}
           {...register('description')}
@@ -164,8 +167,8 @@ export default function CreateProject() {
         />
 
         <Textarea
-          label="Additional requirements (optional)"
-          placeholder="Anything the skill tags don't cover - e.g. availability, prior experience, willingness to meet in person, language..."
+          label={t.requirements}
+          placeholder={t.requirementsPlaceholder}
           maxLength={300}
           value={additionalRequirements}
           {...register('additionalRequirements')}
@@ -174,22 +177,22 @@ export default function CreateProject() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-surface-700">Type</span>
+            <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.type}</span>
             <select
               {...register('type')}
               className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
             >
-              <option value="ongoing">Ongoing</option>
-              <option value="event">Event (has a deadline)</option>
+              <option value="ongoing">{t.typeOngoing}</option>
+              <option value="event">{t.typeEvent}</option>
             </select>
           </label>
           {type === 'event' && (
-            <Input label="Deadline" type="date" {...register('deadline')} error={errors.deadline?.message} />
+            <Input label={t.deadline} type="date" {...register('deadline')} error={errors.deadline?.message} />
           )}
         </div>
 
         <CategorizedTagPicker
-          label="Interests"
+          label={t.interests}
           name="interests"
           categories={INTEREST_CATEGORIES}
           selected={interests}
@@ -203,13 +206,13 @@ export default function CreateProject() {
 
         <div data-field="roles">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-surface-700">Roles</span>
+            <span className="text-sm font-medium text-surface-700">{t.roles}</span>
             <button
               type="button"
               onClick={() => append({ title: '', requiredSkills: [], slotsTotal: 1 })}
               className="flex items-center gap-1 text-sm font-medium text-accent-600"
             >
-              <Plus size={14} /> Add role
+              <Plus size={14} /> {t.addRole}
             </button>
           </div>
 
@@ -220,7 +223,7 @@ export default function CreateProject() {
               return (
                 <Card key={field.id}>
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-medium text-surface-500">Role {index + 1}</span>
+                    <span className="text-sm font-medium text-surface-500">{t.role(index + 1)}</span>
                     {fields.length > 1 && (
                       <button type="button" onClick={() => remove(index)} className="text-surface-400 hover:text-red-600">
                         <Trash2 size={16} />
@@ -229,13 +232,13 @@ export default function CreateProject() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
-                      label="Title"
-                      placeholder="Frontend Developer"
+                      label={t.roleTitle}
+                      placeholder={t.rolePlaceholder}
                       {...register(`roles.${index}.title` as const)}
                       error={errors.roles?.[index]?.title?.message}
                     />
                     <Input
-                      label={`Slots${minSlots > 1 ? ` (min ${minSlots} - already filled)` : ''}`}
+                      label={minSlots > 1 ? t.slotsMin(minSlots) : t.slots}
                       type="number"
                       min={minSlots}
                       {...register(`roles.${index}.slotsTotal` as const)}
@@ -244,10 +247,10 @@ export default function CreateProject() {
                   </div>
                   <div className="mt-3">
                     <CategorizedTagPicker
-                      label="Required skills"
+                      label={t.requiredSkills}
                       name={`roles.${index}.requiredSkills`}
+                      kind="skill"
                       categories={SKILL_CATEGORIES}
-                      searchPlaceholder="Search skills..."
                       selected={roleSkills as Skill[]}
                       onToggle={(skill) =>
                         setValue(
@@ -263,7 +266,9 @@ export default function CreateProject() {
               );
             })}
           </div>
-          {errors.roles?.message && <p className="mt-1 text-xs text-red-600">{errors.roles.message}</p>}
+          {errors.roles?.message && (
+            <p className="mt-1 text-xs text-red-600">{translateError(tAll, errors.roles.message)}</p>
+          )}
         </div>
 
         {serverError && (
@@ -279,7 +284,7 @@ export default function CreateProject() {
               loading={isSubmitting}
               onClick={handleSubmit((v) => submit(v, true), scrollToFirstError)}
             >
-              Save as draft
+              {t.saveDraft}
             </Button>
           )}
           <Button
@@ -288,7 +293,7 @@ export default function CreateProject() {
             loading={isSubmitting}
             onClick={handleSubmit((v) => submit(v, false), scrollToFirstError)}
           >
-            {isEditing ? 'Save changes' : 'Publish'}
+            {isEditing ? tAll.common.saveChanges : t.publish}
           </Button>
         </div>
       </form>

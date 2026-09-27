@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { applicationSchema, type ApplicationFormValues } from '@/utils/validation';
+import { useT } from '@/i18n';
 
 export function ApplyModal({
   open,
@@ -26,6 +27,7 @@ export function ApplyModal({
     formState: { errors },
   } = useForm<ApplicationFormValues>({ resolver: zodResolver(applicationSchema) });
   const message = watch('message') ?? '';
+  const t = useT().apply;
 
   const submit = async (values: ApplicationFormValues) => {
     await onSubmit(values);
@@ -33,18 +35,18 @@ export function ApplyModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={`Apply - ${roleTitle}`}>
+    <Modal open={open} onClose={onClose} title={t.title(roleTitle)}>
       <form onSubmit={handleSubmit(submit)} className="space-y-4">
         <Textarea
-          label="Short message"
-          placeholder="Why are you a good fit for this role?"
+          label={t.message}
+          placeholder={t.placeholder}
           maxLength={200}
           value={message}
           {...register('message')}
           error={errors.message?.message}
         />
         <Button type="submit" className="w-full" loading={submitting}>
-          Send application
+          {t.send}
         </Button>
       </form>
     </Modal>

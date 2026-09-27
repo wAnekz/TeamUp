@@ -1,5 +1,6 @@
 import type { Application, Project, ProjectDisplayStatus, ProjectRole } from '@/types';
 import { isDeadlinePassed } from './dates';
+import { getT } from '@/i18n';
 
 /**
  * Single source of truth for turning (isDraft, status, slots) into the 5
@@ -14,13 +15,10 @@ export function getDisplayStatus(project: Project): ProjectDisplayStatus {
   return isFull ? 'full' : 'open';
 }
 
-export const DISPLAY_STATUS_LABEL: Record<ProjectDisplayStatus, string> = {
-  draft: 'Draft',
-  open: 'Open',
-  full: 'Full',
-  closed: 'Closed',
-  archived: 'Archived',
-};
+/** Status label in the current UI language. */
+export function displayStatusLabel(status: ProjectDisplayStatus): string {
+  return getT().status[status];
+}
 
 export const DISPLAY_STATUS_TONE: Record<ProjectDisplayStatus, 'accent' | 'gray' | 'green' | 'red' | 'yellow'> = {
   draft: 'gray',
@@ -45,12 +43,12 @@ export function getApplyBlockedReason(
   isOwner: boolean,
   alreadyApplied: boolean,
 ): string | null {
-  if (isOwner) return "Author's project";
-  if (alreadyApplied) return 'Already applied';
-  if (project.status === 'archived') return 'Recruitment closed';
-  if (project.status === 'closed') return 'Recruitment closed';
-  if (project.deadline && isDeadlinePassed(project.deadline)) return 'Deadline passed';
-  if (role.slotsFilled >= role.slotsTotal) return 'Project full';
+  const t = getT().applyBlocked;
+  if (isOwner) return t.own;
+  if (alreadyApplied) return t.applied;
+  if (project.status === 'archived' || project.status === 'closed') return t.closed;
+  if (project.deadline && isDeadlinePassed(project.deadline)) return t.deadline;
+  if (role.slotsFilled >= role.slotsTotal) return t.full;
   return null;
 }
 

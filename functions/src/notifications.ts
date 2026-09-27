@@ -6,6 +6,7 @@ import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/fire
 import { defineSecret, defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
 import nodemailer from 'nodemailer';
+import { sendTelegram, TELEGRAM_BOT_TOKEN } from './telegram';
 
 /**
  * Email notifications for the application flow:
@@ -43,7 +44,7 @@ import nodemailer from 'nodemailer';
 
 export const GMAIL_APP_PASSWORD = defineSecret('GMAIL_APP_PASSWORD');
 const GMAIL_USER = defineString('GMAIL_USER', { default: 'you@gmail.com' });
-const APP_URL = defineString('APP_URL', { default: 'https://your-app.web.app' });
+export const APP_URL = defineString('APP_URL', { default: 'https://your-app.web.app' });
 
 export async function sendEmail(opts: { to: string; subject: string; html: string }) {
   const appPassword = GMAIL_APP_PASSWORD.value();
@@ -134,8 +135,7 @@ export function emailShell(bodyHtml: string) {
       </p>
       ${bodyHtml}
       <p style="margin-top: 32px; font-size: 12px; color: #71717A;">
-        You're getting this because of activity on your TeamUp account. This is a transactional email - there's no
-        unsubscribe, but you also won't get anything except updates directly about you.
+        Это письмо пришло из-за активности в вашем аккаунте TeamUp. Мы присылаем только то, что касается лично вас.
       </p>
     </div>
   `;
@@ -143,29 +143,41 @@ export function emailShell(bodyHtml: string) {
 
 // applications/{applicationId} created → email the project owner.
 export const notifyNewApplication = onDocumentCreated(
-  { document: 'applications/{applicationId}', secrets: [GMAIL_APP_PASSWORD] },
+  { document: 'applications/{applicationId}', secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
   async (event) => {
     const application = event.data?.data();
     if (!application) return;
+
+    // Created already-accepted by joinByInvite (functions/src/invites.ts) —
+    // there's nothing to review, just tell the owner who joined.
+    if (application.viaInvite) {
+      const note = {
+        title: 'Новый участник',
+        body: `${application.applicantName} вступил(а) в «${application.projectTitle}» как ${application.roleTitle} по вашей ссылке`,
+        url: `/projects/${application.projectId}`,
+      };
+      await Promise.all([sendPush(application.ownerId, note), sendTelegram(application.ownerId, { ...note, button: 'Открыть проект' })]);
+      return;
+    }
 
     const ownerSnap = await getFirestore().doc(`users/${application.ownerId}/private/info`).get();
     const ownerEmail = ownerSnap.data()?.email;
     if (ownerEmail) {
       await sendEmail({
         to: ownerEmail,
-        subject: `New application: ${application.applicantName} → ${application.roleTitle}`,
+        subject: `Новая заявка: ${application.applicantName} → ${application.roleTitle}`,
         html: emailShell(`
           <p style="font-size: 15px; line-height: 1.5;">
-            <strong>${escapeHtml(application.applicantName)}</strong> applied for
-            <strong>${escapeHtml(application.roleTitle)}</strong> on your project
-            "<strong>${escapeHtml(application.projectTitle)}</strong>".
+            <strong>${escapeHtml(application.applicantName)}</strong> подал(а) заявку на роль
+            <strong>${escapeHtml(application.roleTitle)}</strong> в вашем проекте
+            «<strong>${escapeHtml(application.projectTitle)}</strong>».
           </p>
           <p style="font-size: 15px; line-height: 1.5; background: #F4F4F5; border-radius: 12px; padding: 12px 16px;">
             "${escapeHtml(application.message)}"
           </p>
           <p style="margin-top: 20px;">
             <a href="${APP_URL.value()}/dashboard?tab=projects" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-              Review application
+              Посмотреть заявку
             </a>
           </p>
         `),
@@ -174,24 +186,27 @@ export const notifyNewApplication = onDocumentCreated(
       logger.warn('Project owner has no email on file, skipping email notification', { ownerId: application.ownerId });
     }
 
-    await sendPush(application.ownerId, {
-      title: 'New application',
-      body: `${application.applicantName} applied for ${application.roleTitle} on ${application.projectTitle}`,
-      url: '/dashboard?tab=projects',
-    });
+    const note = {
+      title: 'Новая заявка',
+      body: `${application.applicantName} хочет в «${application.projectTitle}» на роль ${application.roleTitle}`,
+      url: `/projects/${application.projectId}`,
+    };
+    await Promise.all([sendPush(application.ownerId, note), sendTelegram(application.ownerId, { ...note, button: 'Посмотреть' })]);
   },
 );
 
 // applications/{applicationId} updated → if status just flipped to
 // accepted/rejected, email the applicant.
 export const notifyApplicationDecision = onDocumentUpdated(
-  { document: 'applications/{applicationId}', secrets: [GMAIL_APP_PASSWORD] },
+  { document: 'applications/{applicationId}', secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
   async (event) => {
     const before = event.data?.before.data();
     const after = event.data?.after.data();
     if (!before || !after) return;
     if (before.status === after.status) return;
     if (after.status !== 'accepted' && after.status !== 'rejected') return;
+    // The applicant accepted themselves through an invite link — they know.
+    if (after.viaInvite) return;
 
     const accepted = after.status === 'accepted';
 
@@ -201,31 +216,31 @@ export const notifyApplicationDecision = onDocumentUpdated(
       await sendEmail({
         to: applicantEmail,
         subject: accepted
-          ? `You're in! ${after.projectTitle} accepted your application`
-          : `Update on your application to ${after.projectTitle}`,
+          ? `Ты в команде! «${after.projectTitle}» принял(а) твою заявку`
+          : `Ответ на твою заявку в «${after.projectTitle}»`,
         html: emailShell(
           accepted
             ? `
               <p style="font-size: 15px; line-height: 1.5;">
-                Good news - you were accepted for <strong>${escapeHtml(after.roleTitle)}</strong> on
-                "<strong>${escapeHtml(after.projectTitle)}</strong>". The team's contact info and chat are now
-                unlocked on your dashboard.
+                Отличные новости - тебя приняли на роль <strong>${escapeHtml(after.roleTitle)}</strong> в
+                «<strong>${escapeHtml(after.projectTitle)}</strong>». Контакты команды и чат теперь доступны
+                на странице проекта.
               </p>
               <p style="margin-top: 20px;">
                 <a href="${APP_URL.value()}/projects/${after.projectId}" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-                  Open project
+                  Открыть проект
                 </a>
               </p>
             `
             : `
               <p style="font-size: 15px; line-height: 1.5;">
-                Your application for <strong>${escapeHtml(after.roleTitle)}</strong> on
-                "<strong>${escapeHtml(after.projectTitle)}</strong>" wasn't accepted this time. Don't worry - there
-                are always new projects posting on TeamUp.
+                Заявку на роль <strong>${escapeHtml(after.roleTitle)}</strong> в
+                «<strong>${escapeHtml(after.projectTitle)}</strong>» в этот раз не приняли. Не расстраивайся -
+                на TeamUp постоянно появляются новые проекты.
               </p>
               <p style="margin-top: 20px;">
                 <a href="${APP_URL.value()}/feed" style="display: inline-block; background: #4F46E5; color: #fff; text-decoration: none; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600;">
-                  Browse projects
+                  Смотреть проекты
                 </a>
               </p>
             `,
@@ -235,13 +250,14 @@ export const notifyApplicationDecision = onDocumentUpdated(
       logger.warn('Applicant has no email on file, skipping email notification', { applicantId: after.applicantId });
     }
 
-    await sendPush(after.applicantId, {
-      title: accepted ? "You're in!" : 'Application update',
+    const note = {
+      title: accepted ? 'Ты в команде!' : 'Ответ на заявку',
       body: accepted
-        ? `You were accepted for ${after.roleTitle} on ${after.projectTitle}`
-        : `Your application to ${after.projectTitle} wasn't accepted this time`,
+        ? `Тебя приняли на роль ${after.roleTitle} в «${after.projectTitle}»`
+        : `Заявку в «${after.projectTitle}» в этот раз не приняли`,
       url: accepted ? `/projects/${after.projectId}` : '/feed',
-    });
+    };
+    await Promise.all([sendPush(after.applicantId, note), sendTelegram(after.applicantId, note)]);
   },
 );
 

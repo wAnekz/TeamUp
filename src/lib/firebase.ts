@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -22,6 +24,11 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
 
-// Note: Firebase Storage is intentionally not initialized here — avatar
-// uploads go through ImgBB (see src/hooks/useProfile.ts) to avoid requiring
-// the Blaze billing plan. Re-add getStorage(app) here if you switch back.
+// Avatars still go through ImgBB (see src/hooks/useProfile.ts). Storage is
+// used only for achievement files (diplomas, certificate PDFs) — ImgBB
+// can't host PDFs. The project is already on Blaze for Cloud Functions, so
+// Storage's free tier covers this; see storage.rules for the size/type caps.
+export const storage = getStorage(app);
+
+// Callable functions (joinByInvite, inviteToProject) — see functions/src/invites.ts.
+export const functions = getFunctions(app);
