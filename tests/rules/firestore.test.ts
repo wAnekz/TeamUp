@@ -32,9 +32,25 @@ import { ref, uploadBytes } from 'firebase/storage';
 let env: RulesTestEnvironment;
 
 const guest = () => env.unauthenticatedContext().firestore();
-const as = (uid: string, verified = true) => env.authenticatedContext(uid, { email_verified: verified }).firestore();
+const as = (uid: string, verified = true) =>
+  env.authenticatedContext(uid, { email_verified: verified, email: `${uid}@example.com` }).firestore();
+
+// The Firestore emulator can reset the very first connection right after it
+// reports "ready" (seen on macOS), so poke it until it answers.
+async function waitForFirestoreEmulator() {
+  const host = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080';
+  for (let i = 0; i < 20; i++) {
+    try {
+      if ((await fetch(`http://${host}/`)).ok) return;
+    } catch {
+      // not ready yet
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+}
 
 beforeAll(async () => {
+  await waitForFirestoreEmulator();
   env = await initializeTestEnvironment({
     projectId: 'demo-teamup',
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
@@ -55,6 +71,8 @@ beforeEach(async () => {
     await setDoc(doc(db, 'users/legacy'), { ...user('legacy'), contacts: { telegram: '@old' } });
     await setDoc(doc(db, 'users/bob'), user('bob'));
     await setDoc(doc(db, 'users/newbie'), { uid: 'newbie', profileComplete: false });
+    await setDoc(doc(db, 'users/mallory'), { ...user('mallory'), banned: true });
+    await setDoc(doc(db, 'projects/pm'), { title: 'PM', authorId: 'mallory', isDraft: false, status: 'open', members: [], roles: [] });
     await setDoc(doc(db, 'users/alice/private/info'), { email: 'alice@example.com' });
     await setDoc(doc(db, 'users/alice/private/telegram'), { chatId: 111, digest: true });
     await setDoc(doc(db, 'users/alice/private/contacts'), { contacts: { telegram: '@alice' }, visibleTo: ['carol'] });
@@ -215,14 +233,6 @@ describe('teams and applications', () => {
 
 describe('team membership (it unlocks contacts)', () => {
   const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', ownerId: 'alice', status: 'pending', message: 'hi' };
-  const applyAsBob = () => setDoc(doc(as('bob'), 'applications/p1_r1_bob'), app);
-  const accept = (member: string, appId = 'p1_r1_bob') => {
-    const db = as('alice');
-    const batch = writeBatch(db);
-    batch.update(doc(db, `applications/${appId}`), { status: 'accepted', updatedAt: serverTimestamp() });
-    batch.update(doc(db, 'projects/p1'), { members: arrayUnion(member), acceptedApplicationId: appId });
-    return batch.commit();
-  };
 
   it('a new project cannot come with a prefilled team', async () => {
     const p = { title: 'P2', authorId: 'bob', status: 'open', isDraft: false };
@@ -230,29 +240,23 @@ describe('team membership (it unlocks contacts)', () => {
     await assertSucceeds(setDoc(doc(as('bob'), 'projects/p2'), { ...p, members: [] }));
   });
 
-  it('the owner cannot add someone who did not apply', async () => {
+  it('only the acceptApplication function changes the team, never the client', async () => {
+    await assertSucceeds(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), app));
+    const db = as('alice');
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'applications/p1_r1_bob'), { status: 'accepted', updatedAt: serverTimestamp() });
+    batch.update(doc(db, 'projects/p1'), { members: arrayUnion('bob'), acceptedApplicationId: 'p1_r1_bob' });
+    await assertFails(batch.commit());
+    await assertFails(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { status: 'accepted' }));
     await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['bob'] }));
-    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['bob'], acceptedApplicationId: 'p1_r1_bob' }));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { memberRoles: { bob: 'Dev' } }));
   });
 
-  it('accepting a real application adds exactly that applicant', async () => {
-    await assertSucceeds(applyAsBob());
-    await assertFails(accept('carol'));
-    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['bob'], acceptedApplicationId: 'p1_r1_bob' })); // still pending
-    await assertSucceeds(accept('bob'));
-  });
-
-  it('an application to another project does not count', async () => {
-    await env.withSecurityRulesDisabled((ctx) =>
-      setDoc(doc(ctx.firestore(), 'applications/p9_r1_bob'), { ...app, projectId: 'p9', ownerId: 'alice' }),
-    );
-    await assertFails(accept('bob', 'p9_r1_bob'));
-  });
-
-  it('the owner can remove members but not hand the project over', async () => {
+  it('the owner cannot remove members client-side or hand the project over', async () => {
     await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'projects/p1'), { members: ['bob', 'carol'] }));
-    await assertSucceeds(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['carol'] }));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['carol'] }));
     await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { authorId: 'bob' }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'projects/p1'), { title: 'Renamed' }));
   });
 });
 
@@ -263,7 +267,7 @@ describe('applications and posts keep their owners', () => {
     await assertFails(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), { ...app, ownerId: 'carol' }));
   });
 
-  it('the owner may only accept or reject', async () => {
+  it('the owner may only reject client-side', async () => {
     await assertSucceeds(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), app));
     await assertFails(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { ownerId: 'carol' }));
     await assertFails(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { message: 'edited' }));
@@ -277,9 +281,88 @@ describe('applications and posts keep their owners', () => {
   });
 });
 
+describe('moderation-owned profile fields', () => {
+  it('a student cannot verify, confirm or complete their own profile', async () => {
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { verified: true }));
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { isStudentConfirmed: true }));
+    await assertFails(updateDoc(doc(as('newbie'), 'users/newbie'), { profileComplete: true }));
+    await assertFails(setDoc(doc(as('newbie'), 'users/newbie'), { profileComplete: true }, { merge: true }));
+    await assertSucceeds(updateDoc(doc(as('newbie'), 'users/newbie'), { name: 'New Kid', city: 'Almaty' }));
+  });
+
+  it('a new profile starts unverified and incomplete', async () => {
+    const base = { uid: 'fresh', name: '', skills: [], interests: [] };
+    await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, profileComplete: true }));
+    await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, verified: true }));
+    await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, isStudentConfirmed: true }));
+    await assertSucceeds(
+      setDoc(doc(as('fresh'), 'users/fresh'), { ...base, verified: false, isStudentConfirmed: false, profileComplete: false }),
+    );
+  });
+});
+
+describe('banned students cannot post anything', () => {
+  it('no projects, applications, chat messages or team posts', async () => {
+    await assertFails(setDoc(doc(as('mallory'), 'projects/pm2'), { title: 'x', authorId: 'mallory', status: 'open', members: [] }));
+    await assertFails(
+      setDoc(doc(as('mallory'), 'applications/p1_r1_mallory'), {
+        projectId: 'p1', roleId: 'r1', applicantId: 'mallory', ownerId: 'alice', status: 'pending', message: 'hi',
+      }),
+    );
+    await assertFails(
+      setDoc(doc(as('mallory'), 'projects/pm/messages/m1'), { projectId: 'pm', authorId: 'mallory', text: 'hello' }),
+    );
+    await assertFails(setDoc(doc(as('mallory'), 'lookingForTeam/lm'), { authorId: 'mallory', active: true }));
+    // …while the same writes work for someone in good standing.
+    await assertSucceeds(setDoc(doc(as('alice'), 'projects/p1/messages/m1'), { projectId: 'p1', authorId: 'alice', text: 'hello' }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'lookingForTeam/lb'), { authorId: 'bob', active: true }));
+  });
+});
+
+describe('links are http(s) only', () => {
+  const evil = 'javascript:alert(1)';
+
+  it('achievements', async () => {
+    const base = { uid: 'bob', title: 'Won', type: 'hackathon' };
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/achievements/a1'), { ...base, link: evil }));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/achievements/a2'), { ...base, fileUrl: evil }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/achievements/a3'), { ...base, link: 'https://devpost.com/x', fileUrl: null }));
+  });
+
+  it('team results', async () => {
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { result: { text: '1st', eventName: 'X', link: evil } }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'projects/p1'), { result: { text: '1st', eventName: 'X', link: 'https://x.kz' } }));
+  });
+
+  it('portfolio contact and avatar', async () => {
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: { portfolio: evil } }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: { portfolio: 'https://bob.dev' } }));
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { avatarUrl: evil }));
+    await assertSucceeds(updateDoc(doc(as('bob'), 'users/bob'), { avatarUrl: 'https://firebasestorage.googleapis.com/a.png' }));
+  });
+});
+
+describe('identity on public lists and emails', () => {
+  const sub = { uid: 'bob', eventId: 'e1', lookingForTeam: true, createdAt: serverTimestamp() };
+
+  it('an interest subscription shows your own name and avatar only', async () => {
+    await assertFails(setDoc(doc(as('bob'), 'eventSubscriptions/bob_e1'), { ...sub, userName: 'alice', userAvatarUrl: null }));
+    await assertFails(
+      setDoc(doc(as('bob'), 'eventSubscriptions/bob_e1'), { ...sub, userName: 'bob', userAvatarUrl: 'https://evil.example/x.png' }),
+    );
+    await assertSucceeds(setDoc(doc(as('bob'), 'eventSubscriptions/bob_e1'), { ...sub, userName: 'bob', userAvatarUrl: null }));
+  });
+
+  it('notification email is your sign-in email', async () => {
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/info'), { email: 'victim@example.com' }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/info'), { email: 'bob@example.com' }));
+    await assertFails(updateDoc(doc(as('alice'), 'users/alice/private/info'), { email: 'victim@example.com' }));
+  });
+});
+
 describe('events', () => {
   it('interest subscriptions are yours only and can’t fake reminder state', async () => {
-    const sub = { uid: 'bob', eventId: 'e1', userName: 'Bob', userAvatarUrl: null, lookingForTeam: true, createdAt: serverTimestamp() };
+    const sub = { uid: 'bob', eventId: 'e1', userName: 'bob', userAvatarUrl: null, lookingForTeam: true, createdAt: serverTimestamp() };
     await assertFails(setDoc(doc(as('bob'), 'eventSubscriptions/alice_e1'), { ...sub, uid: 'alice' }));
     await assertFails(setDoc(doc(as('bob'), 'eventSubscriptions/wrongid'), sub));
     await assertSucceeds(setDoc(doc(as('bob'), 'eventSubscriptions/bob_e1'), sub));

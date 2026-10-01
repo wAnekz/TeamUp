@@ -1,8 +1,8 @@
 name: CI
 
 on:
+  # Every branch, so security-rules tests run before anything reaches main.
   push:
-    branches: [main]
   pull_request:
 
 jobs:
