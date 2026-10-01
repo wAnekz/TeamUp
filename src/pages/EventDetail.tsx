@@ -13,6 +13,7 @@ import { useAuthGate } from '@/hooks/useAuthGate';
 import { useT } from '@/i18n';
 import { cn } from '@/utils/cn';
 import type { EventItem } from '@/types';
+import { safeUrl } from '@/utils/safeUrl';
 
 function toDateInput(ts: EventItem['date'] | null | undefined) {
   return ts ? ts.toDate().toISOString().slice(0, 10) : '';
@@ -166,8 +167,8 @@ export default function EventDetail() {
             </label>
           )}
 
-          {event.registrationUrl && (
-            <a href={event.registrationUrl} target="_blank" rel="noopener noreferrer" className="block">
+          {safeUrl(event.registrationUrl) && (
+            <a href={safeUrl(event.registrationUrl)} target="_blank" rel="noopener noreferrer" className="block">
               <Button variant="secondary" className="w-full" disabled={registrationClosed}>
                 <ExternalLink size={16} /> {registrationClosed ? t.regClosed : t.register}
               </Button>
@@ -192,10 +193,10 @@ export default function EventDetail() {
             <BookOpen size={14} className="text-accent-600" /> {t.prepare}
           </p>
           <div className="space-y-1.5">
-            {event.resources.map((r, i) => (
+            {event.resources.filter((r) => safeUrl(r.url)).map((r, i) => (
               <a
                 key={i}
-                href={r.url}
+                href={safeUrl(r.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-sm text-accent-600 hover:underline"

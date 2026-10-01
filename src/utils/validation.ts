@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SKILLS, SKILL_LEVELS, INTERESTS } from '@/types';
+import { normalizeHttpUrl } from '@/utils/safeUrl';
 
 // Messages are keys of `validation` in src/i18n/*.ts — form fields translate
 // them (see translateError), so the schemas stay language-agnostic.
@@ -19,7 +20,13 @@ export const profileSchema = z
     interests: z.array(z.enum(INTERESTS)).min(1, 'oneInterest'),
     telegram: z.string().max(60).optional().or(z.literal('')),
     github: z.string().max(60).optional().or(z.literal('')),
-    portfolio: z.string().max(120).optional().or(z.literal('')),
+    portfolio: z
+      .string()
+      .max(120)
+      // "mysite.dev" is fine (https:// is added on save); any other scheme is not.
+      .refine((v) => !v.trim() || normalizeHttpUrl(v) !== null, 'linkHttps')
+      .optional()
+      .or(z.literal('')),
     instagram: z.string().max(60).optional().or(z.literal('')),
   })
   .refine((data) => !!(data.telegram || data.github || data.portfolio || data.instagram), {

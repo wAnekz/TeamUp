@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, Timestamp, updateDoc } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import imageCompression from 'browser-image-compression';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { storage } from '@/lib/firebaseStorage';
 import type { Achievement, AchievementType } from '@/types';
 import { getT } from '@/i18n';
 

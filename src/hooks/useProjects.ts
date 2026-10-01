@@ -4,6 +4,7 @@ import {
   query,
   where,
   limit,
+  orderBy,
   getDocs,
   getDoc,
   doc,
@@ -27,13 +28,11 @@ const PAGE_SIZE = 12;
 const FEED_POOL_CAP = 300;
 
 /**
- * Builds the feed query. Deliberately has NO orderBy(): combining an
- * orderBy() on a different field with where() equality filters requires a
- * composite Firestore index to be manually created/deployed first, and a
- * missing index makes the query fail outright (empty-looking feed, no
- * visible error unless you check devtools). Equality + array-contains-any
- * filters alone are covered by Firestore's automatic indexes, so we fetch a
- * capped, unsorted pool here and do sorting/pagination/search in JS below.
+ * Builds the feed query: newest first, so a fresh project always makes the
+ * pool no matter how many exist. Each filter combination has a composite
+ * index in firestore.indexes.json. Firestore allows one array-contains-any
+ * per query, so when both skills and interests are picked, interests are
+ * filtered in JS below.
  */
 // Signed-out visitors read the anonymized mirror (functions/src/publicProjects.ts)
 // — same shape minus names/avatars/members, so every card/detail component
@@ -45,10 +44,10 @@ function projectsCollection(guest: boolean) {
 function buildFeedQuery(filters: ProjectFilters, guest: boolean) {
   const constraints: QueryConstraint[] = [where('isDraft', '==', false), where('status', '==', 'open')];
   if (filters.type) constraints.push(where('type', '==', filters.type));
+  // One array-contains-any per query: skills if picked, otherwise interests.
   if (filters.skills.length) constraints.push(where('skills', 'array-contains-any', filters.skills.slice(0, 10)));
-  if (filters.interests.length)
-    constraints.push(where('interests', 'array-contains-any', filters.interests.slice(0, 10)));
-  constraints.push(limit(FEED_POOL_CAP));
+  else if (filters.interests.length) constraints.push(where('interests', 'array-contains-any', filters.interests.slice(0, 10)));
+  constraints.push(orderBy('createdAt', 'desc'), limit(FEED_POOL_CAP));
 
   return query(projectsCollection(guest), ...constraints);
 }
@@ -61,6 +60,9 @@ export function useProjectFeed(filters: ProjectFilters, guest = false) {
       const snap = await getDocs(buildFeedQuery(filters, guest));
       let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project);
 
+      if (filters.skills.length && filters.interests.length) {
+        items = items.filter((p) => p.interests?.some((i) => filters.interests.includes(i)));
+      }
       if (filters.search) {
         const term = filters.search.toLowerCase();
         items = items.filter((p) => p.title.toLowerCase().includes(term));
@@ -87,9 +89,14 @@ export function useRecommendationPool(guest = false) {
   return useQuery({
     queryKey: ['projects', 'recommendationPool', guest],
     queryFn: async () => {
-      // Same reasoning as buildFeedQuery above: no orderBy server-side.
       const snap = await getDocs(
-        query(projectsCollection(guest), where('isDraft', '==', false), where('status', '==', 'open'), limit(FEED_POOL_CAP)),
+        query(
+          projectsCollection(guest),
+          where('isDraft', '==', false),
+          where('status', '==', 'open'),
+          orderBy('createdAt', 'desc'),
+          limit(FEED_POOL_CAP),
+        ),
       );
       return snap.docs
         .map((d) => ({ id: d.id, ...d.data() }) as Project)

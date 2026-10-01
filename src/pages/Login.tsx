@@ -161,7 +161,7 @@ export default function Login() {
   const needsConsent = !agreed;
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-surface-50 px-4 py-8">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-surface-50 px-4 py-8">
       <Link
         to="/"
         className="mb-4 inline-flex w-full max-w-sm items-center gap-1 text-sm text-surface-500 hover:text-surface-700"
@@ -225,7 +225,7 @@ export default function Login() {
 
         <div className="my-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-surface-200" />
-          <span className="text-xs text-surface-400">{t.or}</span>
+          <span className="text-xs text-surface-500">{t.or}</span>
           <div className="h-px flex-1 bg-surface-200" />
         </div>
 
@@ -245,13 +245,13 @@ export default function Login() {
           </button>
         </p>
 
-        <p className="mt-3 text-center text-xs text-surface-400">
-          <Link to="/privacy" target="_blank" rel="noreferrer" className="hover:text-surface-600 hover:underline">
+        <p className="mt-3 text-center text-xs text-surface-500">
+          <Link to="/privacy" target="_blank" rel="noreferrer" className="hover:text-surface-700 hover:underline">
             {t.privacy}
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }
 

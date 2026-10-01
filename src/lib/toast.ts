@@ -61,6 +61,9 @@ export function subscribeToasts(listener: Listener) {
  * to a generic message rather than leaking a raw stack/object to the user.
  */
 export function errorToMessage(error: unknown): string {
+  // Callable functions send a `reason` we can translate; their message is Russian-only.
+  const reason = (error as { details?: { reason?: unknown } } | null)?.details?.reason;
+  if (typeof reason === 'string' && getT().errors.server[reason]) return getT().errors.server[reason];
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === 'string') return error;
   return getT().common.somethingWrong;

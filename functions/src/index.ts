@@ -15,3 +15,5 @@ export { nudgeInactiveUsers } from './reengagement';
 export { syncTeamResult } from './teamResults';
 export { computeMetrics } from './metrics';
 export { syncContactVisibility, reconcileContacts } from './contacts';
+export { acceptApplication } from './applications';
+export { completeProfile } from './profile';

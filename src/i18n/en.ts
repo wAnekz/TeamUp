@@ -80,6 +80,7 @@ export const en = {
     inDays: (n: number) => `in ${n}d`,
   },
   validation: {
+    linkHttps: 'Link should start with https://',
     nameShort: 'Name is too short',
     age13: 'Must be 13+',
     ageMax: 'This platform is for high schoolers',
@@ -633,6 +634,19 @@ export const en = {
     still: 'Still not seeing it as verified - click the link in the email and try again.',
   },
   errors: {
+    server: {
+      applicationGone: 'Application not found.',
+      alreadyReviewed: 'This application has already been reviewed.',
+      projectGone: 'This project no longer exists.',
+      notOwner: 'Only the team lead can accept applications.',
+      notRecruiting: 'This team is not recruiting right now.',
+      cannotAdd: "This student can't be added.",
+      alreadyMember: 'Already on your team.',
+      roleGone: 'This role no longer exists.',
+      roleFull: 'This role is already full.',
+      profileIncomplete: 'Fill in all required profile fields and at least one contact.',
+      banned: 'This account is suspended.',
+    } as Record<string, string>,
     title: 'Something went wrong',
     text: 'This page hit an unexpected error. Reloading usually fixes it - your data is safe either way.',
     reload: 'Reload page',

@@ -17,6 +17,7 @@ import { formatDeadline, timeAgo } from '@/utils/dates';
 import { toast } from '@/lib/toast';
 import type { EventDraft } from '@/types';
 import { useT } from '@/i18n';
+import { safeUrl } from '@/utils/safeUrl';
 
 function toDateInput(ts: EventDraft['date']) {
   return ts ? ts.toDate().toISOString().slice(0, 10) : '';
@@ -97,7 +98,7 @@ export default function EventDrafts() {
                 {d.registrationDeadline && <span>{tAll.events.registerBy(formatDeadline(d.registrationDeadline))}</span>}
                 {d.organizer && <span>{d.organizer}</span>}
                 <a
-                  href={d.sourceUrl}
+                  href={safeUrl(d.sourceUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-accent-600 hover:underline"

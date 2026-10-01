@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, query, where, getDocs, doc, runTransaction, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
+import { functions } from '@/lib/firebaseFunctions';
 import type { Application, Project } from '@/types';
 import { getT } from '@/i18n';
 
@@ -87,12 +89,9 @@ export function useApplyToRole() {
 }
 
 /**
- * Accepting an application must, atomically:
- *  1. flip the application status to "accepted"
- *  2. bump slotsFilled on the matching role (never exceeding slotsTotal)
- *  3. leave contacts revealed implicitly — the UI checks application status,
- *     not a separate flag, so there's nothing else to keep in sync.
- * Rejecting is a plain status update and doesn't touch slots.
+ * Accepting runs in the acceptApplication function (functions/src/applications.ts):
+ * it adds the student to the team, which clients can't do under
+ * firestore.rules. Rejecting is a plain status update on a pending application.
  */
 export function useReviewApplication() {
   const qc = useQueryClient();
@@ -104,35 +103,11 @@ export function useReviewApplication() {
       application: Application;
       decision: 'accepted' | 'rejected';
     }) => {
-      const appRef = doc(db, 'applications', application.id);
-      const projectRef = doc(db, 'projects', application.projectId);
-
-      await runTransaction(db, async (tx) => {
-        const projectSnap = await tx.get(projectRef);
-        if (!projectSnap.exists()) throw new Error(getT().errors.projectGone);
-        const project = projectSnap.data() as Project;
-
-        if (decision === 'accepted') {
-          const roles = project.roles.map((r) =>
-            r.id === application.roleId && r.slotsFilled < r.slotsTotal
-              ? { ...r, slotsFilled: r.slotsFilled + 1 }
-              : r,
-          );
-          const teamSizeCurrent = roles.reduce((sum, r) => sum + r.slotsFilled, 0);
-          tx.update(projectRef, {
-            roles,
-            teamSizeCurrent,
-            members: arrayUnion(application.applicantId),
-            [`memberRoles.${application.applicantId}`]: application.roleTitle,
-            // firestore.rules only lets members grow with an application
-            // accepted in this same transaction — this tells it which one.
-            acceptedApplicationId: application.id,
-            updatedAt: serverTimestamp(),
-          });
-        }
-
-        tx.update(appRef, { status: decision, updatedAt: serverTimestamp() });
-      });
+      if (decision === 'accepted') {
+        await httpsCallable<{ applicationId: string }, { ok: true }>(functions, 'acceptApplication')({ applicationId: application.id });
+        return;
+      }
+      await updateDoc(doc(db, 'applications', application.id), { status: 'rejected', updatedAt: serverTimestamp() });
     },
     onSuccess: (_r, vars) => {
       qc.invalidateQueries({ queryKey: ['applications', 'project', vars.application.projectId] });

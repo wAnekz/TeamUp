@@ -27,7 +27,7 @@ function randomCode(size = 10) {
   return Array.from(randomBytes(size), (b) => alphabet[b % alphabet.length]).join('');
 }
 
-async function requireCompleteProfile(uid: string) {
+export async function requireCompleteProfile(uid: string) {
   const snap = await getFirestore().doc(`users/${uid}`).get();
   const user = snap.data();
   if (!user?.profileComplete) throw new HttpsError('failed-precondition', 'Сначала заполни профиль.');

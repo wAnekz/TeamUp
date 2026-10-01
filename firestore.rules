@@ -15,10 +15,30 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
 
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isNotBanned() {
+      return isSignedIn() && myProfile().get('banned', false) != true;
+    }
+
+    // Finished onboarding and not banned: required for anything other
+    // students will see (projects, applications, posts, subscriptions).
     function hasCompletedProfile() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileComplete == true;
+        && myProfile().profileComplete == true
+        && isNotBanned();
+    }
+
+    // Links end up in href attributes: http(s) only, never javascript: etc.
+    function isHttpUrl(v) {
+      return v is string && v.lower().matches('^https?://.+');
+    }
+
+    function isOptionalUrl(d, key) {
+      return !(key in d) || d[key] == null || isHttpUrl(d[key]);
     }
 
     function isModerator() {
@@ -35,14 +55,20 @@ service cloud.firestore {
     // ---------------- users ----------------
     match /users/{userId} {
       allow read: if isSignedIn();
+      // banned, verified, isStudentConfirmed and profileComplete are set by
+      // moderators or the completeProfile function, never by the student.
       allow create: if isOwner(userId)
         && !('contacts' in request.resource.data)
-        && !('banned' in request.resource.data);
+        && !('banned' in request.resource.data)
+        && request.resource.data.get('verified', false) == false
+        && request.resource.data.get('isStudentConfirmed', false) == false
+        && request.resource.data.get('profileComplete', false) == false
+        && isOptionalUrl(request.resource.data, 'avatarUrl');
       allow update: if (isOwner(userId)
         && request.resource.data.uid == userId
         && !('email' in request.resource.data)
-        // Bans are moderator-only: a banned student must not lift their own.
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['banned'])
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['banned', 'verified', 'isStudentConfirmed', 'profileComplete'])
+        && isOptionalUrl(request.resource.data, 'avatarUrl')
         // Contacts moved to private/contacts: they may be removed from the
         // public profile (migration) but never added or changed here.
         && (!('contacts' in request.resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['contacts'])))
@@ -59,14 +85,23 @@ service cloud.firestore {
       // The owner may disconnect (chatId → null) or toggle the digest, but
       // never point it at a chat id of their choosing — that would let
       // someone aim the bot's messages at another person's chat.
+      // private/info.email is where notification emails go: only the
+      // address the student actually signed in with.
       allow create: if isOwner(userId) && docId != 'telegram'
-        && (docId != 'contacts' || request.resource.data.keys().hasOnly(['contacts']));
+        && (docId != 'contacts' || (request.resource.data.keys().hasOnly(['contacts']) && validContacts()))
+        && (docId != 'info' || request.resource.data.email == request.auth.token.email);
       allow update: if isOwner(userId)
-        && (docId != 'contacts' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contacts']))
+        && (docId != 'contacts' || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contacts']) && validContacts()))
+        && (docId != 'info' || request.resource.data.email == request.auth.token.email)
         && (docId != 'telegram'
             || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chatId', 'digest'])
                 && (request.resource.data.chatId == null || request.resource.data.chatId == resource.data.chatId)));
       allow delete: if false;
+
+      function validContacts() {
+        let portfolio = request.resource.data.contacts.get('portfolio', null);
+        return portfolio == null || portfolio == '' || isHttpUrl(portfolio);
+      }
     }
 
     // ---------------- achievements (portfolio) ----------------
@@ -80,7 +115,9 @@ service cloud.firestore {
           && d.title is string && d.title.size() > 0 && d.title.size() <= 100
           && d.type in ['hackathon', 'olympiad', 'certificate', 'project', 'other']
           && (!('description' in d) || d.description == null || (d.description is string && d.description.size() <= 400))
-          && (!('result' in d) || d.result == null || (d.result is string && d.result.size() <= 60));
+          && (!('result' in d) || d.result == null || (d.result is string && d.result.size() <= 60))
+          && isOptionalUrl(d, 'link')
+          && isOptionalUrl(d, 'fileUrl');
       }
       allow read: if isSignedIn();
       allow create, update: if isOwner(userId) && validAchievement();
@@ -141,34 +178,23 @@ service cloud.firestore {
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.status in ['open', 'closed', 'archived']
         // Teammates gain access to each other's contacts (functions/src/contacts.ts),
-        // so a team starts empty and grows only through accepted applications.
-        && request.resource.data.get('members', []).size() == 0;
+        // so a team starts empty and only server code (acceptApplication,
+        // joinByInvite) ever adds anyone to it.
+        && request.resource.data.get('members', []).size() == 0
+        && !('memberRoles' in request.resource.data)
+        && validResult();
 
       allow update: if (isOwner(resource.data.authorId)
+          && isNotBanned()
           && request.resource.data.authorId == resource.data.authorId
-          && isValidTeamChange())
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['members', 'memberRoles'])
+          && validResult())
         || isViewCountIncrement();
       allow delete: if isOwner(resource.data.authorId) || isModerator();
 
-      // members may stay the same, shrink (owner removes someone), or grow by
-      // exactly one student whose application to this project is accepted in
-      // the same transaction (useReviewApplication passes its id as
-      // acceptedApplicationId). Invite-link joins go through joinByInvite.
-      function isValidTeamChange() {
-        let before = resource.data.get('members', []);
-        let after = request.resource.data.get('members', []);
-        return before.toSet().hasAll(after.toSet()) || isAcceptedJoin(before, after);
-      }
-
-      function isAcceptedJoin(before, after) {
-        let appId = request.resource.data.get('acceptedApplicationId', '');
-        let appPath = /databases/$(database)/documents/applications/$(appId);
-        return appId is string && appId.size() > 0
-          && after.size() == before.size() + 1
-          && exists(appPath)
-          && get(appPath).data.projectId == projectId
-          && after.toSet().difference(before.toSet()) == [get(appPath).data.applicantId].toSet()
-          && getAfter(appPath).data.status == 'accepted';
+      function validResult() {
+        let r = request.resource.data.get('result', null);
+        return r == null || isOptionalUrl(r, 'link');
       }
 
       function isViewCountIncrement() {
@@ -189,6 +215,7 @@ service cloud.firestore {
 
         allow read: if isTeamMember();
         allow create: if isTeamMember()
+          && isNotBanned()
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.projectId == projectId
           && request.resource.data.text is string
@@ -215,11 +242,14 @@ service cloud.firestore {
         && !('viaInvite' in request.resource.data) // set only by joinByInvite
         && applicationId == request.resource.data.projectId + '_' + request.resource.data.roleId + '_' + request.resource.data.applicantId;
 
-      // The project owner only decides; everything else on the application is fixed.
+      // The project owner may reject a pending application. Accepting goes
+      // through the acceptApplication function, which also adds the student
+      // to the team.
       allow update: if isSignedIn()
         && resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'pending'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
-        && request.resource.data.status in ['accepted', 'rejected'];
+        && request.resource.data.status == 'rejected';
 
       allow delete: if false;
     }
@@ -229,6 +259,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if hasCompletedProfile() && isEmailVerified() && request.resource.data.authorId == request.auth.uid;
       allow update: if isOwner(resource.data.authorId)
+        && isNotBanned()
         && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isOwner(resource.data.authorId);
     }
@@ -273,6 +304,9 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && subId == request.auth.uid + '_' + request.resource.data.eventId
         && request.resource.data.keys().hasOnly(['uid', 'eventId', 'userName', 'userAvatarUrl', 'lookingForTeam', 'createdAt'])
+        // Shown on the public "who's going" list: your own name and photo only.
+        && request.resource.data.userName == myProfile().name
+        && request.resource.data.userAvatarUrl == myProfile().get('avatarUrl', null)
         && request.resource.data.lookingForTeam is bool;
       allow update: if isOwner(resource.data.uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lookingForTeam'])

@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  browserPopupRedirectResolver,
   signOut as firebaseSignOut,
   sendEmailVerification,
   type User,
@@ -83,6 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      // Read by the inline script in index.html: signed-in visitors skip the
+      // pre-rendered landing hero so it doesn't flash before the feed.
+      try {
+        if (firebaseUser) localStorage.setItem('teamup:signedIn', '1');
+        else localStorage.removeItem('teamup:signedIn');
+      } catch {
+        // storage blocked — the hero just shows briefly
+      }
       setEmailVerified(firebaseUser?.emailVerified ?? false);
       try {
         if (firebaseUser) {
@@ -138,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInGoogle = async () => {
-    const cred = await signInWithPopup(auth, googleProvider);
+    const cred = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
     await ensureUserDoc(cred.user.uid, cred.user.email);
     await loadProfile(cred.user.uid);
   };
@@ -164,6 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth.currentUser) return false;
     await auth.currentUser.reload();
     const verified = auth.currentUser.emailVerified;
+    // Security rules read email_verified from the ID token, which reload()
+    // doesn't refresh — without this, writes keep failing until it expires.
+    if (verified) await auth.currentUser.getIdToken(true);
     setEmailVerified(verified);
     return verified;
   };

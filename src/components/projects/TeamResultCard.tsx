@@ -9,6 +9,7 @@ import { formatDeadline, isDeadlinePassed } from '@/utils/dates';
 import { toast, errorToMessage } from '@/lib/toast';
 import { useT } from '@/i18n';
 import type { Project } from '@/types';
+import { safeUrl } from '@/utils/safeUrl';
 
 /**
  * Closing the loop after an event: the lead records how it went, and
@@ -44,7 +45,7 @@ export function TeamResultCard({ project, isOwner }: { project: Project; isOwner
             text: text.trim().slice(0, 60),
             eventName: eventName.trim().slice(0, 100),
             date: date ? Timestamp.fromDate(new Date(date)) : null,
-            link: /^https?:\/\//.test(link.trim()) ? link.trim() : null,
+            link: safeUrl(link) ?? null,
             recordedAt: serverTimestamp() as unknown as Timestamp,
           },
         },
@@ -67,9 +68,9 @@ export function TeamResultCard({ project, isOwner }: { project: Project; isOwner
           </p>
           <div className="mt-0.5 flex flex-wrap gap-3 text-xs text-surface-500">
             {result.date && <span>{formatDeadline(result.date)}</span>}
-            {result.link && (
+            {safeUrl(result.link) && (
               <a
-                href={result.link}
+                href={safeUrl(result.link)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-accent-600 hover:underline"

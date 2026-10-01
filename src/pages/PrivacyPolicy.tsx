@@ -1,70 +1,17 @@
-import { type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { setLang, useLang } from '@/lib/lang';
+import { LegalPage, type LegalContent, type LegalSection } from '@/components/layout/LegalPage';
+import type { Lang } from '@/lib/lang';
 
 /**
- * Publicly readable — no RequireAuth/RequireGuest wrapper in App.tsx —
- * because people need to be able to read this *before* creating an account
- * (linked from the signup consent checkbox on Login.tsx) and because a
- * privacy policy that requires a login to view defeats its own purpose.
- *
- * This page has its own EN/RU/KZ switcher rather than the rest of the app
- * being translated — it's the one page a non-Russian-speaking parent,
- * regulator, or platform reviewer is most likely to need to read, and it's
- * the one place a language mismatch (a Russian-only policy on an
- * English-language product) actually matters. This is a self-contained
- * substitute for that mismatch, not a first step toward full-site i18n.
+ * Publicly readable (no auth wrapper in App.tsx): people need it *before*
+ * creating an account, and it's linked from the sign-up consent checkbox.
+ * Full text in RU/EN/KZ, with a short summary on top for 14–18 year olds.
  */
-
-type Lang = 'ru' | 'en' | 'kz';
-
-const LANG_LABEL: Record<Lang, string> = { ru: 'Русский', en: 'English', kz: 'Қазақша' };
-
-const UI = {
-  ru: { back: '← TeamUp', updated: 'Дата последнего обновления', title: 'Политика конфиденциальности TeamUp' },
-  en: { back: '← TeamUp', updated: 'Last updated', title: 'TeamUp Privacy Policy' },
-  kz: { back: '← TeamUp', updated: 'Соңғы жаңарту күні', title: 'TeamUp құпиялылық саясаты' },
-};
 
 const EMAIL = 'dilanabkanov@gmail.com';
 const SITE_URL = 'https://team-up-web.netlify.app/';
 const SITE_LABEL = SITE_URL.replace('https://', '').replace(/\/$/, '');
 
-interface Section {
-  heading: string;
-  paragraphs?: string[];
-  list?: string[];
-}
-
-// Minimal inline formatter: **bold** and [label](url) (mailto: or https:).
-// Kept intentionally tiny — this is a legal document, not a place for rich
-// markdown — but bold terms and a handful of contact/provider links are
-// enough to need *something* rather than three copies of raw JSX per section.
-function renderInline(text: string): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*|\[[^\]]+\]\([^)]+\))/g).filter(Boolean);
-  return parts.map((part, i) => {
-    const bold = part.match(/^\*\*([^*]+)\*\*$/);
-    if (bold) return <strong key={i}>{bold[1]}</strong>;
-    const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
-    if (link) {
-      const isExternal = link[2].startsWith('http');
-      return (
-        <a
-          key={i}
-          className="text-accent-600 hover:underline"
-          href={link[2]}
-          target={isExternal ? '_blank' : undefined}
-          rel={isExternal ? 'noreferrer' : undefined}
-        >
-          {link[1]}
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
-
-const CONTENT: Record<Lang, Section[]> = {
+const SECTIONS: Record<Lang, LegalSection[]> = {
   ru: [
     {
       heading: '1. Кто мы',
@@ -364,60 +311,45 @@ const CONTENT: Record<Lang, Section[]> = {
 
 const UPDATED_DATE = '01.10.2026';
 
+const CONTENT: Record<Lang, LegalContent> = {
+  ru: {
+    title: 'Политика конфиденциальности TeamUp',
+    summaryTitle: 'Коротко',
+    summary: [
+      'Мы собираем только то, что нужно для поиска команды: email, имя, возраст, класс, город, школу, навыки и интересы.',
+      '**Твои контакты** (Telegram, GitHub и т.д.) видят только люди из твоих команд. Остальные их не видят.',
+      'Без аккаунта на сайте видны только проекты без имён и фото.',
+      'Мы не продаём данные и не показываем рекламу.',
+      `Хочешь удалить аккаунт и все данные - напиши на [${EMAIL}](mailto:${EMAIL}), удалим в течение 7 дней.`,
+    ],
+    sections: SECTIONS.ru,
+  },
+  en: {
+    title: 'TeamUp Privacy Policy',
+    summaryTitle: 'In short',
+    summary: [
+      'We only collect what you need to find a team: email, name, age, grade, city, school, skills and interests.',
+      '**Your contacts** (Telegram, GitHub, etc.) are visible only to people on your teams. Nobody else sees them.',
+      'Without an account, visitors only see projects with no names or photos.',
+      "We don't sell data and don't show ads.",
+      `Want to delete your account and all data? Email [${EMAIL}](mailto:${EMAIL}) and we'll do it within 7 days.`,
+    ],
+    sections: SECTIONS.en,
+  },
+  kz: {
+    title: 'TeamUp құпиялылық саясаты',
+    summaryTitle: 'Қысқаша',
+    summary: [
+      'Біз команда табуға керектісін ғана жинаймыз: email, аты, жасы, сыныбы, қаласы, мектебі, дағдылары мен қызығушылықтары.',
+      '**Байланыстарыңды** (Telegram, GitHub т.б.) тек командаңдағы адамдар көреді. Басқалар көрмейді.',
+      'Аккаунтсыз сайтта тек аты мен суреті жоқ жобалар көрінеді.',
+      'Біз деректерді сатпаймыз және жарнама көрсетпейміз.',
+      `Аккаунтты және барлық деректі өшіргің келсе, [${EMAIL}](mailto:${EMAIL}) поштасына жаз, 7 күн ішінде өшіреміз.`,
+    ],
+    sections: SECTIONS.kz,
+  },
+};
+
 export default function PrivacyPolicy() {
-  // Opens in whatever language the visitor already picked on the landing /
-  // sign-up page; switching here updates that shared choice too.
-  const lang = useLang();
-  const t = UI[lang];
-
-  return (
-    <div className="min-h-dvh bg-surface-50 px-4 py-10">
-      <div className="mx-auto max-w-2xl rounded-3xl border border-surface-200 bg-white p-7 shadow-card sm:p-10">
-        <div className="flex items-center justify-between gap-3">
-          <Link to="/feed" className="text-sm font-medium text-accent-600 hover:underline">
-            {t.back}
-          </Link>
-          <div className="flex gap-1 rounded-full bg-surface-100 p-1">
-            {(Object.keys(LANG_LABEL) as Lang[]).map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setLang(l)}
-                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                  lang === l ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500 hover:text-surface-700'
-                }`}
-              >
-                {LANG_LABEL[l]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <h1 className="mt-4 text-2xl font-bold text-surface-900">{t.title}</h1>
-        <p className="mt-1 text-sm text-surface-400">
-          {t.updated}: {UPDATED_DATE}
-        </p>
-
-        <div className="prose-sm mt-6 space-y-5 text-sm leading-relaxed text-surface-700">
-          {CONTENT[lang].map((section) => (
-            <section key={section.heading}>
-              <h2 className="text-base font-semibold text-surface-900">{section.heading}</h2>
-              {section.paragraphs?.map((p, i) => (
-                <p key={i} className="mt-1.5">
-                  {renderInline(p)}
-                </p>
-              ))}
-              {section.list && (
-                <ul className="mt-1.5 list-disc space-y-1 pl-5">
-                  {section.list.map((item, i) => (
-                    <li key={i}>{renderInline(item)}</li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return <LegalPage content={CONTENT} updated={UPDATED_DATE} />;
 }

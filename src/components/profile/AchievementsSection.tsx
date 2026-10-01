@@ -16,6 +16,7 @@ import { formatDeadline } from '@/utils/dates';
 import { toast, errorToMessage } from '@/lib/toast';
 import { useT } from '@/i18n';
 import type { Achievement, AchievementType } from '@/types';
+import { safeUrl } from '@/utils/safeUrl';
 
 const TYPE_ICON: Record<AchievementType, typeof Trophy> = {
   hackathon: Trophy,
@@ -109,19 +110,19 @@ export function AchievementsSection({ uid, editable = false }: { uid: string; ed
                     {tAll.teamResult.asRole(a.role === 'lead' ? tAll.teams.lead : a.role)}
                   </p>
                 )}
-                {a.fileUrl && isImage && (
-                  <a href={a.fileUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                {safeUrl(a.fileUrl) && isImage && (
+                  <a href={safeUrl(a.fileUrl)} target="_blank" rel="noopener noreferrer" className="mt-2 block">
                     <img
-                      src={a.fileUrl}
+                      src={safeUrl(a.fileUrl)}
                       alt={a.fileName ?? a.title}
                       className="max-h-48 rounded-xl border border-surface-200 object-contain"
                     />
                   </a>
                 )}
                 <div className="mt-1.5 flex flex-wrap gap-3 text-xs">
-                  {a.fileUrl && !isImage && (
+                  {safeUrl(a.fileUrl) && !isImage && (
                     <a
-                      href={a.fileUrl}
+                      href={safeUrl(a.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-accent-600 hover:underline"
@@ -129,9 +130,9 @@ export function AchievementsSection({ uid, editable = false }: { uid: string; ed
                       <Paperclip size={12} /> {a.fileName ?? t.openFile}
                     </a>
                   )}
-                  {a.link && (
+                  {a.link && safeUrl(a.link) && (
                     <a
-                      href={a.link}
+                      href={safeUrl(a.link)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-accent-600 hover:underline"
@@ -174,7 +175,7 @@ function AchievementModal({ uid, existing, onClose }: { uid: string; existing?: 
   const submit = async () => {
     setError(null);
     if (!title.trim()) return setError(t.needTitle);
-    if (link && !/^https?:\/\//i.test(link.trim())) return setError(t.linkHttps);
+    if (link.trim() && !safeUrl(link)) return setError(t.linkHttps);
     try {
       await saveMutation.mutateAsync({
         id: existing?.id,

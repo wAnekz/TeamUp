@@ -21,7 +21,8 @@ export default defineConfig({
       manifest: {
         name: 'TeamUp',
         short_name: 'TeamUp',
-        description: 'Find teammates for hackathons, olympiads and projects.',
+        description: 'Команды для хакатонов, олимпиад и проектов для школьников 14-18 лет.',
+        lang: 'ru',
         theme_color: '#4F46E5',
         background_color: '#FFFFFF',
         display: 'standalone',
@@ -36,6 +37,8 @@ export default defineConfig({
         // Cache built static assets (JS/CSS/images/fonts). Firestore/Auth calls are
         // never cached here — the app is offline-tolerant for the shell only.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Social-preview image: only crawlers need it, not worth precaching.
+        globIgnores: ['og.png'],
         // Pulls the FCM background-message handler into this same service
         // worker (see public/firebase-messaging-sw.js) instead of registering
         // a second SW — only one SW can control "/" at a time.
@@ -69,7 +72,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage', 'firebase/functions'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'firebase-storage': ['firebase/storage'],
+          'firebase-functions': ['firebase/functions'],
           vendor: ['react', 'react-dom', 'react-router-dom'],
         },
       },
