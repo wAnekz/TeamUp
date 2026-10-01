@@ -135,6 +135,16 @@ try {
   process.exitCode = 0;
 } catch (e) {
   console.log(`E2E FAILED at "${step}": ${e.message}`);
+  // Workflow-command lines become annotations on the CI run.
+  if (process.env.CI) {
+    console.log(`::error title=E2E failed::${step}: ${e.message}`.replace(/\n/g, ' '));
+    for (const c of consoleErrors.slice(0, 8)) console.log(`::warning title=Browser console::${c.replace(/\n/g, ' ').slice(0, 400)}`);
+    const pages = (await Promise.all(browser.browserContexts().map((c) => c.pages()))).flat();
+    for (const p of pages) {
+      const text = await p.evaluate(() => location.pathname + ' | ' + document.body.innerText.replace(/\s+/g, ' ').slice(0, 300)).catch(() => '');
+      console.log(`::warning title=Page state::${text}`);
+    }
+  }
   process.exitCode = 1;
   const pages = (await Promise.all(browser.browserContexts().map((c) => c.pages()))).flat();
   for (const [i, p] of pages.entries()) if (OUT) await p.screenshot({ path: `${OUT}/e2e-fail-${i}.png`, fullPage: true }).catch(() => {});
