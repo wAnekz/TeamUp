@@ -13,10 +13,11 @@
 #   teamup-6a054.firebaseapp.com, apis.google.com, accounts.google.com - Google sign-in popup
 #   www.gstatic.com                      - FCM scripts imported by the service worker
 #   img-src https:                       - avatars and event images come from many hosts
+#   'sha256-…'                           - the inline pre-render script in index.html (re-hash if it changes)
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.cloudfunctions.net https://*.firebaseio.com wss://*.firebaseio.com https://teamup-6a054.firebaseapp.com https://www.gstatic.com; frame-src https://teamup-6a054.firebaseapp.com https://accounts.google.com https://apis.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'sha256-sTxh2UiRsXJ5i5awLMOz7Hw0jMFHETNTU2BepqJBwgo=' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.cloudfunctions.net https://*.firebaseio.com wss://*.firebaseio.com https://teamup-6a054.firebaseapp.com https://www.gstatic.com; frame-src https://teamup-6a054.firebaseapp.com https://accounts.google.com https://apis.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"

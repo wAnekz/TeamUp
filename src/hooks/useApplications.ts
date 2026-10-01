@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, doc, runTransaction, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { functions } from '@/lib/firebaseFunctions';
 import type { Application, Project } from '@/types';
 import { getT } from '@/i18n';
 

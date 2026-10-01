@@ -15,7 +15,7 @@ import { timeAgo } from '@/utils/dates';
 import { toast, errorToMessage } from '@/lib/toast';
 import { useMutation } from '@tanstack/react-query';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/lib/firebase';
+import { functions } from '@/lib/firebaseFunctions';
 import { useT } from '@/i18n';
 import type { Report } from '@/types';
 

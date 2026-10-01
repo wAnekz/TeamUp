@@ -1,8 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { connectAuthEmulator, getAuth, GoogleAuthProvider } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  connectAuthEmulator,
+  GoogleAuthProvider,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from 'firebase/auth';
 import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
-import { connectStorageEmulator, getStorage } from 'firebase/storage';
-import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,7 +18,10 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+// initializeAuth instead of getAuth: getAuth also wires up the popup resolver,
+// which loads Google's sign-in iframe on every page view. The resolver is
+// passed only where it's needed (signInWithPopup in AuthContext).
+export const auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
 export const googleProvider = new GoogleAuthProvider();
 
 // Multi-tab persistent cache. This is the modern replacement for the old
@@ -24,19 +31,9 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
 
-// Avatars (src/hooks/useProfile.ts) and achievement files — diplomas,
-// certificate PDFs (src/hooks/useAchievements.ts). The project is already on
-// Blaze for Cloud Functions, so Storage's free tier covers this; see
-// storage.rules for the size/type caps.
-export const storage = getStorage(app);
-
-// Callable functions (joinByInvite, inviteToProject) — see functions/src/invites.ts.
-export const functions = getFunctions(app);
-
 // Local end-to-end runs against the Firebase emulators (never set in production builds).
-if (import.meta.env.VITE_USE_EMULATORS === 'true') {
+export const useEmulators = import.meta.env.VITE_USE_EMULATORS === 'true';
+if (useEmulators) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
-  connectStorageEmulator(storage, '127.0.0.1', 9199);
-  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
 }

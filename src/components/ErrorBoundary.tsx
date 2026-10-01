@@ -1,6 +1,8 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { FeedbackButton } from '@/components/FeedbackButton';
+import { Component, type ErrorInfo, type ReactNode, lazy, Suspense } from 'react';
 import { getT } from '@/i18n';
+
+// Lazy so framer-motion and the form libraries stay out of the first bundle.
+const FeedbackButton = lazy(() => import('@/components/FeedbackButton').then((m) => ({ default: m.FeedbackButton })));
 
 interface Props {
   children: ReactNode;
@@ -55,12 +57,14 @@ export class ErrorBoundary extends Component<Props, State> {
           >
             {t.errors.reload}
           </button>
-          <FeedbackButton
+          <Suspense fallback={null}>
+            <FeedbackButton
             initialMessage={errorContext}
             label={t.feedback.letKnow}
             variant="secondary"
             className="w-full"
           />
+          </Suspense>
         </div>
       </div>
     );

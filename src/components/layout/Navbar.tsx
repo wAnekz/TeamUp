@@ -1,13 +1,17 @@
+import { lazy, Suspense } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Compass, Users, LayoutGrid, PlusCircle, User, ShieldAlert, Calendar, Trophy, LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar } from '@/components/ui/primitives';
 import { useIsModerator } from '@/hooks/useReports';
-import { FeedbackButton } from '@/components/FeedbackButton';
 import { cn } from '@/utils/cn';
 import { useLang, type Lang } from '@/lib/lang';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { useT } from '@/i18n';
+
+// Lazy: its modal pulls in framer-motion and the form libraries, which the
+// first screen (landing) doesn't need.
+const FeedbackButton = lazy(() => import('@/components/FeedbackButton').then((m) => ({ default: m.FeedbackButton })));
 
 
 // Signed-out visitors: only the pages they can actually browse. Labels
@@ -56,7 +60,9 @@ export function Navbar() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <FeedbackButton variant="icon" />
+            <Suspense fallback={null}>
+              <FeedbackButton variant="icon" />
+            </Suspense>
             {isModerator && (
               <NavLink
                 to="/moderation/reports"

@@ -11,6 +11,7 @@ import { onForegroundPush } from '@/lib/messaging';
 import { toast } from '@/lib/toast';
 import App from './App';
 import './index.css';
+import '@fontsource-variable/inter';
 
 // Foreground pushes (app tab already open/focused) don't trigger a system
 // notification on their own — only background ones do, via
@@ -35,9 +36,12 @@ registerSW({
   },
 });
 
+// Only when a previous SW was in charge: on a first visit the new SW claiming
+// the page is not an update, and reloading would load the site twice.
+const hadController = !!navigator.serviceWorker?.controller;
 let hasReloaded = false;
 navigator.serviceWorker?.addEventListener('controllerchange', () => {
-  if (hasReloaded) return;
+  if (!hadController || hasReloaded) return;
   hasReloaded = true;
   window.location.reload();
 });

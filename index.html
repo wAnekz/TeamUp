@@ -23,13 +23,21 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>TeamUp - найди команду для хакатонов и олимпиад</title>
+    <!-- Hides the pre-rendered hero for signed-in users, other languages and other pages. Its hash is allowed in netlify.toml's CSP. -->
+    <script>try{var s=localStorage,l=s.getItem('teamup:lang');if(location.pathname!=='/'||s.getItem('teamup:signedIn')||(l&&l!=='ru'))document.documentElement.classList.add('no-prerender')}catch(e){}</script>
+    <style>.no-prerender #prerender{display:none}</style>
   </head>
   <body class="bg-surface-50 text-surface-900 antialiased">
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static copy of the landing hero so first paint doesn't wait for JS; React replaces it. -->
+      <main id="prerender" class="mx-auto max-w-6xl px-4 pt-20 text-center sm:pt-28">
+        <span class="inline-flex items-center rounded-full bg-accent-50 px-3 py-1 text-xs font-medium text-accent-700">Для школьников 14-18 лет в Казахстане</span>
+        <h1 class="mx-auto mt-4 max-w-2xl text-3xl font-bold tracking-tight text-surface-900 sm:text-5xl">Найди команду для хакатонов и олимпиад</h1>
+        <p class="mx-auto mt-4 max-w-xl text-base text-surface-500 sm:text-lg">Вступай в команду, которой нужны твои навыки, или собери свою. Каждая команда и награда попадает в портфолио для поступления в университет.</p>
+        <p class="mt-7"><a href="/login?mode=signup" class="inline-flex h-12 items-center rounded-xl bg-accent-600 px-6 font-medium text-white">Начать</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

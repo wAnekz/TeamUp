@@ -3,14 +3,13 @@ import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { AllowGuest, RequireAuth, RequireGuest } from '@/components/layout/guards';
 import { useAuth } from '@/contexts/AuthContext';
-import Login from '@/pages/Login';
 import NotFound from '@/pages/NotFound';
 
 // Everything below is only needed once a specific route is visited, so it's
-// split into its own chunk instead of shipping in the initial bundle every
-// visitor downloads before they've even logged in. Login/NotFound stay
-// eager above since a first-ever load almost always lands on one of them
-// (either directly, or via RequireAuth/RequireGuest redirecting there).
+// split into its own chunk instead of shipping in the initial bundle. Only
+// NotFound stays eager; Login is lazy too, since it carries the form
+// libraries and most first visits now land on the landing page.
+const Login = lazy(() => import('@/pages/Login'));
 const CompleteProfile = lazy(() => import('@/pages/CompleteProfile'));
 const Feed = lazy(() => import('@/pages/Feed'));
 const ProjectDetail = lazy(() => import('@/pages/ProjectDetail'));
@@ -83,7 +82,9 @@ export default function App() {
         path="/login"
         element={
           <RequireGuest>
-            <Login />
+            <Page>
+              <Login />
+            </Page>
           </RequireGuest>
         }
       />
