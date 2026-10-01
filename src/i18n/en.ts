@@ -80,6 +80,7 @@ export const en = {
     inDays: (n: number) => `in ${n}d`,
   },
   validation: {
+    linkHttps: 'Link should start with https://',
     nameShort: 'Name is too short',
     age13: 'Must be 13+',
     ageMax: 'This platform is for high schoolers',

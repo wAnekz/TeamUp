@@ -75,6 +75,7 @@ export const kz: Dict = {
     inDays: (n) => `${n} күннен кейін`,
   },
   validation: {
+    linkHttps: 'Сілтеме https:// деп басталуы керек',
     nameShort: 'Аты тым қысқа',
     age13: '13 жастан асуы керек',
     ageMax: 'Платформа оқушыларға арналған',

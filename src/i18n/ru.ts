@@ -74,6 +74,7 @@ export const ru: Dict = {
     inDays: (n) => `через ${n} дн.`,
   },
   validation: {
+    linkHttps: 'Ссылка должна начинаться с https://',
     nameShort: 'Слишком короткое имя',
     age13: 'Нужно быть старше 13 лет',
     ageMax: 'Платформа для школьников',

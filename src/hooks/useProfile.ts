@@ -84,6 +84,9 @@ export function useContacts(uid: string | undefined) {
 }
 
 export async function saveContacts(uid: string, contacts: UserContacts) {
+  // firestore.rules accept only http(s) links; "mysite.dev" becomes "https://mysite.dev".
+  const portfolio = contacts.portfolio?.trim();
+  const normalized = { ...contacts, portfolio: portfolio ? (/^https?:\/\//i.test(portfolio) ? portfolio : `https://${portfolio}`) : (contacts.portfolio ?? null) };
   // merge: never touch `visibleTo`, which only the server maintains.
-  await setDoc(doc(db, 'users', uid, 'private', 'contacts'), { contacts }, { merge: true });
+  await setDoc(doc(db, 'users', uid, 'private', 'contacts'), { contacts: normalized }, { merge: true });
 }

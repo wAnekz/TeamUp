@@ -19,7 +19,13 @@ export const profileSchema = z
     interests: z.array(z.enum(INTERESTS)).min(1, 'oneInterest'),
     telegram: z.string().max(60).optional().or(z.literal('')),
     github: z.string().max(60).optional().or(z.literal('')),
-    portfolio: z.string().max(120).optional().or(z.literal('')),
+    portfolio: z
+      .string()
+      .max(120)
+      // "mysite.dev" is fine (https:// is added on save); any other scheme is not.
+      .refine((v) => !/^[a-z][a-z0-9+.-]*:/i.test(v) || /^https?:\/\//i.test(v), 'linkHttps')
+      .optional()
+      .or(z.literal('')),
     instagram: z.string().max(60).optional().or(z.literal('')),
   })
   .refine((data) => !!(data.telegram || data.github || data.portfolio || data.instagram), {

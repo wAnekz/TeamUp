@@ -2,7 +2,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { serverTimestamp, doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SchoolPicker } from '@/components/profile/SchoolPicker';
@@ -86,13 +87,12 @@ export default function CompleteProfile() {
           bio: values.bio || '',
           skills: values.skills,
           interests: values.interests,
-          isStudentConfirmed: true,
-          verified: false,
-          profileComplete: true,
           updatedAt: serverTimestamp(),
         },
         { merge: true },
       );
+      // profileComplete is set server-side once the saved profile checks out.
+      await httpsCallable(functions, 'completeProfile')();
       await refreshProfile();
       navigate('/feed');
     } catch (e) {
