@@ -31,3 +31,6 @@ npm-debug.log*
 
 # claude code
 .claude/
+
+# netlify cli
+.netlify/
