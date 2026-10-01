@@ -164,6 +164,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth.currentUser) return false;
     await auth.currentUser.reload();
     const verified = auth.currentUser.emailVerified;
+    // Security rules read email_verified from the ID token, which reload()
+    // doesn't refresh — without this, writes keep failing until it expires.
+    if (verified) await auth.currentUser.getIdToken(true);
     setEmailVerified(verified);
     return verified;
   };

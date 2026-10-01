@@ -25,12 +25,13 @@ export function useProjectChat(projectId: string | undefined, enabled: boolean) 
     const subscribe = () => {
       setLoading(true);
       setError(null);
-      const q = query(collection(db, 'projects', projectId, 'messages'), orderBy('createdAt', 'asc'), limit(500));
+      // Newest 500, shown oldest-first: a long chat must never hide what was just sent.
+      const q = query(collection(db, 'projects', projectId, 'messages'), orderBy('createdAt', 'desc'), limit(500));
       unsub = onSnapshot(
         q,
         (snap) => {
           if (cancelled) return;
-          setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ChatMessage));
+          setMessages(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as ChatMessage).reverse());
           setLoading(false);
         },
         (err) => {
