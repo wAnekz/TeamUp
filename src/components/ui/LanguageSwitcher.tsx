@@ -14,7 +14,7 @@ export function LanguageSwitcher({ compact = false, className }: { compact?: boo
           title={LANG_LABEL[l]}
           className={cn(
             'rounded-full px-2 py-1 text-xs font-medium transition-colors',
-            lang === l ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-500 hover:text-surface-700',
+            lang === l ? 'bg-white text-surface-900 shadow-sm' : 'text-surface-600 hover:text-surface-800',
           )}
         >
           {compact ? LANG_SHORT[l] : LANG_LABEL[l]}

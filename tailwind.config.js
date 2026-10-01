@@ -21,18 +21,10 @@ export default {
           800: '#3730A3',
           900: '#312E81',
         },
-        surface: {
-          50: '#FAFAFA',
-          100: '#F4F4F5',
-          200: '#E4E4E7',
-          300: '#D4D4D8',
-          400: '#A1A1AA',
-          500: '#71717A',
-          600: '#52525B',
-          700: '#3F3F46',
-          800: '#27272A',
-          900: '#18181B',
-        },
+        // CSS variables (src/index.css) so the whole scale flips in dark mode.
+        surface: Object.fromEntries(
+          [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((k) => [k, `rgb(var(--surface-${k}) / <alpha-value>)`]),
+        ),
       },
       borderRadius: {
         xl: '0.875rem',

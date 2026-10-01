@@ -21,6 +21,7 @@ const EventDetail = lazy(() => import('@/pages/EventDetail'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const UserProfile = lazy(() => import('@/pages/UserProfile'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
+const Terms = lazy(() => import('@/pages/Terms'));
 const ModerationReports = lazy(() => import('@/pages/moderation/Reports'));
 const ModerationEventDrafts = lazy(() => import('@/pages/moderation/EventDrafts'));
 const ModerationStats = lazy(() => import('@/pages/moderation/Stats'));
@@ -116,6 +117,14 @@ export default function App() {
         element={
           <Page>
             <PrivacyPolicy />
+          </Page>
+        }
+      />
+      <Route
+        path="/terms"
+        element={
+          <Page>
+            <Terms />
           </Page>
         }
       />
