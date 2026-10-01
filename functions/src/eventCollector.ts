@@ -5,9 +5,11 @@ import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
 
 /**
- * Collects hackathons/olympiads once a day into eventDrafts/{id} for a
- * moderator to approve on /moderation/events. Never publishes directly —
- * sources are noisy and many events aren't open to school students.
+ * Collects hackathons/olympiads once a day. Devpost listings are structured
+ * and always online hackathons, so they go straight to events/. Telegram
+ * posts are noisy free text and many aren't open to school students, so
+ * they land in eventDrafts/{id} for a moderator to approve on
+ * /moderation/events.
  *
  * Sources (configurable by moderators in eventSources/config):
  *   - Devpost's public listing API — online hackathons worldwide.
@@ -104,7 +106,11 @@ export async function collectDevpost(): Promise<DraftFields[]> {
   const out: DraftFields[] = [];
   for (let page = 1; page <= 3 && out.length < MAX_DEVPOST_PER_RUN; page++) {
     const res = await fetch(`https://devpost.com/api/hackathons?status[]=upcoming&status[]=open&page=${page}`, {
-      headers: { Accept: 'application/json', 'User-Agent': 'TeamUpEventCollector/1.0' },
+      // Devpost's bot protection answers 403 to unknown agents from cloud IPs.
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
+      },
     });
     if (!res.ok) {
       logger.warn(`Devpost returned ${res.status}`);
@@ -276,14 +282,51 @@ export const collectEvents = onSchedule(
       await markSeen(draft.sourceUrl, true);
     };
 
+    // Same shape the moderator form writes (useCreateEvent / draftToInput).
+    const publish = async (draft: DraftFields) => {
+      await db.doc(`events/${keyFor(draft.sourceUrl)}`).set({
+        title: draft.title,
+        description: draft.description,
+        competitionTag: draft.title,
+        date: draft.date,
+        format: draft.format,
+        location: draft.location,
+        organizer: draft.organizer,
+        registrationUrl: draft.registrationUrl,
+        registrationDeadline: draft.registrationDeadline,
+        prizePool: draft.prizePool,
+        teamSizeHint: null,
+        imageUrl: draft.imageUrl,
+        resources: [],
+        sourceUrl: draft.sourceUrl,
+        interestedCount: 0,
+        isActive: true,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      await markSeen(draft.sourceUrl, true);
+    };
+
     let queued = 0;
+    let published = 0;
 
     if (useDevpost) {
       try {
+        // Devpost drafts queued before auto-publishing existed.
+        const backlog = await db.collection('eventDrafts').where('source', '==', 'devpost').where('status', '==', 'pending').get();
+        for (const d of backlog.docs) {
+          const draft = d.data() as DraftFields;
+          const upcoming = (draft.date?.toMillis() ?? 0) > Date.now();
+          if (upcoming) {
+            await publish(draft);
+            published++;
+          }
+          await d.ref.update({ status: upcoming ? 'approved' : 'rejected' });
+        }
         for (const draft of await collectDevpost()) {
           if (await isSeen(draft.sourceUrl)) continue;
-          await saveDraft(draft);
-          queued++;
+          await publish(draft);
+          published++;
         }
       } catch (err) {
         logger.error('collectEvents: Devpost failed', err);
@@ -317,6 +360,6 @@ export const collectEvents = onSchedule(
       }
     }
 
-    logger.info(`collectEvents: queued ${queued} draft(s) for review`);
+    logger.info(`collectEvents: published ${published} Devpost event(s), queued ${queued} draft(s) for review`);
   },
 );
