@@ -45,7 +45,7 @@ export function TeamResultCard({ project, isOwner }: { project: Project; isOwner
             text: text.trim().slice(0, 60),
             eventName: eventName.trim().slice(0, 100),
             date: date ? Timestamp.fromDate(new Date(date)) : null,
-            link: /^https?:\/\//.test(link.trim()) ? link.trim() : null,
+            link: safeUrl(link) ?? null,
             recordedAt: serverTimestamp() as unknown as Timestamp,
           },
         },

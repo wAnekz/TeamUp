@@ -5,6 +5,7 @@ import imageCompression from 'browser-image-compression';
 import { db, storage } from '@/lib/firebase';
 import type { UserContacts, UserProfile } from '@/types';
 import { getT } from '@/i18n';
+import { normalizeHttpUrl } from '@/utils/safeUrl';
 
 export function useUpdateProfile(uid: string | undefined) {
   const qc = useQueryClient();
@@ -85,8 +86,7 @@ export function useContacts(uid: string | undefined) {
 
 export async function saveContacts(uid: string, contacts: UserContacts) {
   // firestore.rules accept only http(s) links; "mysite.dev" becomes "https://mysite.dev".
-  const portfolio = contacts.portfolio?.trim();
-  const normalized = { ...contacts, portfolio: portfolio ? (/^https?:\/\//i.test(portfolio) ? portfolio : `https://${portfolio}`) : (contacts.portfolio ?? null) };
+  const normalized = { ...contacts, portfolio: normalizeHttpUrl(contacts.portfolio) };
   // merge: never touch `visibleTo`, which only the server maintains.
   await setDoc(doc(db, 'users', uid, 'private', 'contacts'), { contacts: normalized }, { merge: true });
 }

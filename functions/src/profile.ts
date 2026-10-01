@@ -18,7 +18,8 @@ export function profileProblem(user: Record<string, unknown>, contacts: Record<s
   if (!str(user.city, 2, 60)) return 'city';
   if (!Array.isArray(user.skills) || user.skills.length === 0) return 'skills';
   if (!Array.isArray(user.interests) || user.interests.length === 0) return 'interests';
-  if (!['telegram', 'github', 'portfolio', 'instagram'].some((k) => str(contacts[k], 1, 120))) return 'contacts';
+  // Generous max: saveContacts may prepend https:// to the 120-char form value.
+  if (!['telegram', 'github', 'portfolio', 'instagram'].some((k) => str(contacts[k], 1, 300))) return 'contacts';
   return null;
 }
 
@@ -30,10 +31,10 @@ export const completeProfile = onCall(async (req) => {
   const [userSnap, contactsSnap] = await Promise.all([userRef.get(), db.doc(`users/${uid}/private/contacts`).get()]);
   const user = userSnap.data();
   if (!user) throw new HttpsError('not-found', 'Профиль не найден.');
-  if (user.banned) throw new HttpsError('permission-denied', 'Этот аккаунт заблокирован.');
+  if (user.banned) throw new HttpsError('permission-denied', 'Этот аккаунт заблокирован.', { reason: 'banned' });
 
   const problem = profileProblem(user, contactsSnap.data()?.contacts ?? {});
-  if (problem) throw new HttpsError('invalid-argument', `Профиль заполнен не полностью (${problem}).`);
+  if (problem) throw new HttpsError('invalid-argument', `Профиль заполнен не полностью (${problem}).`, { reason: 'profileIncomplete', field: problem });
 
   await userRef.update({ profileComplete: true, isStudentConfirmed: true });
   return { ok: true };

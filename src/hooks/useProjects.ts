@@ -31,7 +31,8 @@ const FEED_POOL_CAP = 300;
  * Builds the feed query: newest first, so a fresh project always makes the
  * pool no matter how many exist. Each filter combination has a composite
  * index in firestore.indexes.json. Firestore allows one array-contains-any
- * per query, so skills filter server-side and interests in JS below.
+ * per query, so when both skills and interests are picked, interests are
+ * filtered in JS below.
  */
 // Signed-out visitors read the anonymized mirror (functions/src/publicProjects.ts)
 // — same shape minus names/avatars/members, so every card/detail component
@@ -43,7 +44,9 @@ function projectsCollection(guest: boolean) {
 function buildFeedQuery(filters: ProjectFilters, guest: boolean) {
   const constraints: QueryConstraint[] = [where('isDraft', '==', false), where('status', '==', 'open')];
   if (filters.type) constraints.push(where('type', '==', filters.type));
+  // One array-contains-any per query: skills if picked, otherwise interests.
   if (filters.skills.length) constraints.push(where('skills', 'array-contains-any', filters.skills.slice(0, 10)));
+  else if (filters.interests.length) constraints.push(where('interests', 'array-contains-any', filters.interests.slice(0, 10)));
   constraints.push(orderBy('createdAt', 'desc'), limit(FEED_POOL_CAP));
 
   return query(projectsCollection(guest), ...constraints);
@@ -57,7 +60,7 @@ export function useProjectFeed(filters: ProjectFilters, guest = false) {
       const snap = await getDocs(buildFeedQuery(filters, guest));
       let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Project);
 
-      if (filters.interests.length) {
+      if (filters.skills.length && filters.interests.length) {
         items = items.filter((p) => p.interests?.some((i) => filters.interests.includes(i)));
       }
       if (filters.search) {

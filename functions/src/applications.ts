@@ -29,29 +29,32 @@ export const acceptApplication = onCall<{ applicationId?: string }>(async (req) 
 
   await db.runTransaction(async (tx) => {
     const application = (await tx.get(applicationRef)).data();
-    if (!application) throw new HttpsError('not-found', 'Заявка не найдена.');
-    if (application.status !== 'pending') throw new HttpsError('failed-precondition', 'Эту заявку уже рассмотрели.');
+    if (!application) throw new HttpsError('not-found', 'Заявка не найдена.', { reason: 'applicationGone' });
+    if (application.status !== 'pending') throw new HttpsError('failed-precondition', 'Эту заявку уже рассмотрели.', { reason: 'alreadyReviewed' });
 
     const projectRef = db.doc(`projects/${application.projectId}`);
     const project = (await tx.get(projectRef)).data();
-    if (!project) throw new HttpsError('not-found', 'Этого проекта больше нет.');
+    if (!project) throw new HttpsError('not-found', 'Этого проекта больше нет.', { reason: 'projectGone' });
+    if (project.isDraft || project.status !== 'open') {
+      throw new HttpsError('failed-precondition', 'Набор в эту команду закрыт.', { reason: 'notRecruiting' });
+    }
     if (project.authorId !== uid || application.ownerId !== uid) {
-      throw new HttpsError('permission-denied', 'Принимать заявки может только лидер команды.');
+      throw new HttpsError('permission-denied', 'Принимать заявки может только лидер команды.', { reason: 'notOwner' });
     }
     if (applicationId !== `${application.projectId}_${application.roleId}_${application.applicantId}`) {
-      throw new HttpsError('failed-precondition', 'Заявка не относится к этому проекту.');
+      throw new HttpsError('failed-precondition', 'Заявка не относится к этому проекту.', { reason: 'applicationGone' });
     }
 
     const applicant = (await tx.get(db.doc(`users/${application.applicantId}`))).data();
-    if (!applicant || applicant.banned) throw new HttpsError('failed-precondition', 'Этого участника нельзя добавить.');
+    if (!applicant || applicant.banned) throw new HttpsError('failed-precondition', 'Этого участника нельзя добавить.', { reason: 'cannotAdd' });
     if ((project.members ?? []).includes(application.applicantId)) {
-      throw new HttpsError('already-exists', 'Уже в твоей команде.');
+      throw new HttpsError('already-exists', 'Уже в твоей команде.', { reason: 'alreadyMember' });
     }
 
     const roles = (project.roles ?? []) as ProjectRole[];
     const role = roles.find((r) => r.id === application.roleId);
-    if (!role) throw new HttpsError('not-found', 'Этой роли больше нет.');
-    if (role.slotsFilled >= role.slotsTotal) throw new HttpsError('resource-exhausted', 'На этой роли нет мест.');
+    if (!role) throw new HttpsError('not-found', 'Этой роли больше нет.', { reason: 'roleGone' });
+    if (role.slotsFilled >= role.slotsTotal) throw new HttpsError('resource-exhausted', 'На этой роли нет мест.', { reason: 'roleFull' });
 
     const nextRoles = roles.map((r) => (r.id === role.id ? { ...r, slotsFilled: r.slotsFilled + 1 } : r));
     tx.update(projectRef, {

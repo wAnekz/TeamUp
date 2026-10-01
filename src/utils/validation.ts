@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SKILLS, SKILL_LEVELS, INTERESTS } from '@/types';
+import { normalizeHttpUrl } from '@/utils/safeUrl';
 
 // Messages are keys of `validation` in src/i18n/*.ts — form fields translate
 // them (see translateError), so the schemas stay language-agnostic.
@@ -23,7 +24,7 @@ export const profileSchema = z
       .string()
       .max(120)
       // "mysite.dev" is fine (https:// is added on save); any other scheme is not.
-      .refine((v) => !/^[a-z][a-z0-9+.-]*:/i.test(v) || /^https?:\/\//i.test(v), 'linkHttps')
+      .refine((v) => !v.trim() || normalizeHttpUrl(v) !== null, 'linkHttps')
       .optional()
       .or(z.literal('')),
     instagram: z.string().max(60).optional().or(z.literal('')),

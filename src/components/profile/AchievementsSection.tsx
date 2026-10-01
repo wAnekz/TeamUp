@@ -175,7 +175,7 @@ function AchievementModal({ uid, existing, onClose }: { uid: string; existing?: 
   const submit = async () => {
     setError(null);
     if (!title.trim()) return setError(t.needTitle);
-    if (link && !/^https?:\/\//i.test(link.trim())) return setError(t.linkHttps);
+    if (link.trim() && !safeUrl(link)) return setError(t.linkHttps);
     try {
       await saveMutation.mutateAsync({
         id: existing?.id,

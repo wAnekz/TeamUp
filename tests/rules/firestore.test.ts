@@ -317,6 +317,12 @@ describe('banned students cannot post anything', () => {
     await assertSucceeds(setDoc(doc(as('alice'), 'projects/p1/messages/m1'), { projectId: 'p1', authorId: 'alice', text: 'hello' }));
     await assertSucceeds(setDoc(doc(as('bob'), 'lookingForTeam/lb'), { authorId: 'bob', active: true }));
   });
+
+  it('and cannot edit what they already published', async () => {
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'lookingForTeam/lm'), { authorId: 'mallory', active: false }));
+    await assertFails(updateDoc(doc(as('mallory'), 'projects/pm'), { title: 'spam' }));
+    await assertFails(updateDoc(doc(as('mallory'), 'lookingForTeam/lm'), { active: true }));
+  });
 });
 
 describe('links are http(s) only', () => {
@@ -337,6 +343,7 @@ describe('links are http(s) only', () => {
   it('portfolio contact and avatar', async () => {
     await assertFails(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: { portfolio: evil } }));
     await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: { portfolio: 'https://bob.dev' } }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/contacts'), { contacts: { portfolio: 'Https://bob.dev' } }));
     await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { avatarUrl: evil }));
     await assertSucceeds(updateDoc(doc(as('bob'), 'users/bob'), { avatarUrl: 'https://firebasestorage.googleapis.com/a.png' }));
   });

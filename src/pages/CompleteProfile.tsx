@@ -16,6 +16,7 @@ import { profileSchema, type ProfileFormValues } from '@/utils/validation';
 import type { Skill, SkillLevel, Interest } from '@/types';
 import { useState } from 'react';
 import { scrollToFirstError } from '@/utils/formErrors';
+import { errorToMessage } from '@/lib/toast';
 
 export default function CompleteProfile() {
   const { user, refreshProfile } = useAuth();
@@ -96,7 +97,7 @@ export default function CompleteProfile() {
       await refreshProfile();
       navigate('/feed');
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : t.couldNotSave);
+      setServerError(errorToMessage(e));
     }
   };
 

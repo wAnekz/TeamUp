@@ -34,7 +34,7 @@ service cloud.firestore {
 
     // Links end up in href attributes: http(s) only, never javascript: etc.
     function isHttpUrl(v) {
-      return v is string && v.matches('^https?://.+');
+      return v is string && v.lower().matches('^https?://.+');
     }
 
     function isOptionalUrl(d, key) {
@@ -185,6 +185,7 @@ service cloud.firestore {
         && validResult();
 
       allow update: if (isOwner(resource.data.authorId)
+          && isNotBanned()
           && request.resource.data.authorId == resource.data.authorId
           && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['members', 'memberRoles'])
           && validResult())
@@ -258,6 +259,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if hasCompletedProfile() && isEmailVerified() && request.resource.data.authorId == request.auth.uid;
       allow update: if isOwner(resource.data.authorId)
+        && isNotBanned()
         && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isOwner(resource.data.authorId);
     }

@@ -1,7 +1,7 @@
 import { Send, Github, Globe, Instagram } from 'lucide-react';
 import type { UserContacts } from '@/types';
 import { useT } from '@/i18n';
-import { safeUrl } from '@/utils/safeUrl';
+import { normalizeHttpUrl } from '@/utils/safeUrl';
 
 function normalizeHandle(value: string) {
   return value.replace(/^@/, '').trim();
@@ -22,7 +22,7 @@ export function ContactLinks({ contacts }: { contacts: UserContacts | undefined 
     links.push({ key: 'instagram', href: `https://instagram.com/${normalizeHandle(contacts.instagram)}`, label: `@${normalizeHandle(contacts.instagram)}`, icon: Instagram });
   }
   // Older profiles stored "mysite.dev" without a scheme.
-  const portfolio = contacts.portfolio && safeUrl(/^[a-z][a-z0-9+.-]*:/i.test(contacts.portfolio) ? contacts.portfolio : `https://${contacts.portfolio}`);
+  const portfolio = normalizeHttpUrl(contacts.portfolio);
   if (portfolio) {
     links.push({ key: 'portfolio', href: portfolio, label: t.portfolio, icon: Globe });
   }
