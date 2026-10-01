@@ -107,6 +107,14 @@ try {
   await sleep(1500);
   log('bob: applied');
 
+  step = 'bob: no contacts before joining';
+  const aliceProfile = await bob.evaluate(() => [...document.querySelectorAll('a[href^="/users/"]')].find((a) => a.textContent.includes('Alice'))?.getAttribute('href'));
+  await bob.goto(BASE + aliceProfile, { waitUntil: 'networkidle2' });
+  await waitText(bob, 'Alice');
+  await sleep(1500);
+  if (await bob.evaluate(() => document.body.innerText.includes('@alice'))) throw new Error('contacts visible before joining');
+  log('bob: Alice\'s contacts hidden before joining');
+
   step = 'alice: accept';
   await alice.goto(projectUrl, { waitUntil: 'networkidle2' });
   await waitText(alice, 'Bob');
@@ -128,9 +136,16 @@ try {
   await sendIn(bob, 'Привет! Уже в деле');
   await waitText(alice, 'Привет! Уже в деле');
   log('chat: both see each other\'s messages');
-  step = 'bob: sees Alice contact';
-  await waitText(bob, '@alice');
-  log('bob: sees team lead contacts after joining');
+  // Contacts open up via the syncContactVisibility trigger, a moment after accepting.
+  step = 'alice: sees new teammate contacts';
+  let seen = false;
+  for (let i = 0; i < 10 && !seen; i++) {
+    await alice.reload({ waitUntil: 'networkidle2' });
+    seen = await alice.evaluate(() => document.body.innerText.includes('@bob'));
+    if (!seen) await sleep(2000);
+  }
+  if (!seen) throw new Error('@bob not visible to the team lead');
+  log('alice: sees Bob\'s contacts once he joined');
   console.log('E2E PASSED');
   process.exitCode = 0;
 } catch (e) {
