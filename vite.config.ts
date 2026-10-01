@@ -63,7 +63,9 @@ export default defineConfig({
   ],
   server: { port: 5173 },
   build: {
-    sourcemap: true,
+    // No source maps in production: anything in dist/ is deployed and
+    // publicly downloadable, including .map files with the original source.
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {

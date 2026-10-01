@@ -1,6 +1,6 @@
 {
   "projects": {
-    "idk": "teamup-6a054"
+    "default": "teamup-6a054"
   },
   "targets": {},
   "etags": {}

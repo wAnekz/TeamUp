@@ -102,8 +102,8 @@ const CONTENT: Record<Lang, Section[]> = {
       ],
       list: [
         '**Google Firebase** (аутентификация, база данных, хостинг, push-уведомления) — [firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)',
-        '**ImgBB** (хранение загруженных фото профиля) — [imgbb.com/privacy](https://imgbb.com/privacy)',
-        '**Firebase Storage** (хранение файлов достижений) — входит в Google Firebase, см. выше.',
+        '**ImgBB** (хранение фото профиля, загруженных до 01.10.2026) — [imgbb.com/privacy](https://imgbb.com/privacy)',
+        '**Firebase Storage** (хранение фото профиля и файлов достижений) — входит в Google Firebase, см. выше.',
         '**Telegram** (доставка уведомлений, если вы подключили бота) — [telegram.org/privacy](https://telegram.org/privacy)',
         '**Groq** (автоматическая проверка текстов новых проектов и постов «Ищу команду» на недопустимый контент; также разбор публичных постов из Telegram-каналов организаторов для поиска новых событий) — [groq.com/privacy-policy](https://groq.com/privacy-policy/)',
         `**Google (Gmail)** (отправка писем с уведомлениями о заявках и решениях по ним — через обычный Gmail-аккаунт сервиса) — [policies.google.com/privacy](https://policies.google.com/privacy)`,
@@ -199,8 +199,8 @@ const CONTENT: Record<Lang, Section[]> = {
       ],
       list: [
         '**Google Firebase** (authentication, database, hosting, push notifications) — [firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)',
-        '**ImgBB** (storage of uploaded profile photos) — [imgbb.com/privacy](https://imgbb.com/privacy)',
-        '**Firebase Storage** (storage of achievement files) — part of Google Firebase, see above.',
+        '**ImgBB** (storage of profile photos uploaded before 01.10.2026) — [imgbb.com/privacy](https://imgbb.com/privacy)',
+        '**Firebase Storage** (storage of profile photos and achievement files) — part of Google Firebase, see above.',
         '**Telegram** (delivering notifications if you connected the bot) — [telegram.org/privacy](https://telegram.org/privacy)',
         '**Groq** (automatic screening of new project and "looking for team" texts for harmful content; also reading public posts from organizers\' Telegram channels to find new events) — [groq.com/privacy-policy](https://groq.com/privacy-policy/)',
         "**Google (Gmail)** (sending application/decision notification emails, via the service's regular Gmail account) — [policies.google.com/privacy](https://policies.google.com/privacy)",
@@ -298,8 +298,8 @@ const CONTENT: Record<Lang, Section[]> = {
       ],
       list: [
         '**Google Firebase** (аутентификация, дерекқор, хостинг, push-хабарландырулар) — [firebase.google.com/support/privacy](https://firebase.google.com/support/privacy)',
-        '**ImgBB** (жүктелген профиль фотоларын сақтау) — [imgbb.com/privacy](https://imgbb.com/privacy)',
-        '**Firebase Storage** (жетістік файлдарын сақтау) — Google Firebase құрамында, жоғарыны қараңыз.',
+        '**ImgBB** (01.10.2026 дейін жүктелген профиль фотоларын сақтау) — [imgbb.com/privacy](https://imgbb.com/privacy)',
+        '**Firebase Storage** (профиль фотолары мен жетістік файлдарын сақтау) — Google Firebase құрамында, жоғарыны қараңыз.',
         '**Telegram** (ботты қоссаңыз, хабарламаларды жеткізу) — [telegram.org/privacy](https://telegram.org/privacy)',
         '**Groq** (жаңа жобалар мен «Команда іздеймін» мәтіндерін орынсыз мазмұнға автоматты тексеру; сондай-ақ жаңа іс-шараларды табу үшін ұйымдастырушылардың ашық Telegram-арналарындағы жазбаларды талдау) — [groq.com/privacy-policy](https://groq.com/privacy-policy/)',
         '**Google (Gmail)** (өтінімдер мен шешімдер туралы хабарлама хаттарын жіберу — қызметтің әдеттегі Gmail аккаунты арқылы) — [policies.google.com/privacy](https://policies.google.com/privacy)',
@@ -362,7 +362,7 @@ const CONTENT: Record<Lang, Section[]> = {
   ],
 };
 
-const UPDATED_DATE = '27.09.2026';
+const UPDATED_DATE = '01.10.2026';
 
 export default function PrivacyPolicy() {
   // Opens in whatever language the visitor already picked on the landing /

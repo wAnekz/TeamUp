@@ -25,3 +25,9 @@ ui-debug.log
 
 # logs
 npm-debug.log*
+
+# typescript
+*.tsbuildinfo
+
+# claude code
+.claude/

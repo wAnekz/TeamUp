@@ -24,10 +24,10 @@ export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
 
-// Avatars still go through ImgBB (see src/hooks/useProfile.ts). Storage is
-// used only for achievement files (diplomas, certificate PDFs) — ImgBB
-// can't host PDFs. The project is already on Blaze for Cloud Functions, so
-// Storage's free tier covers this; see storage.rules for the size/type caps.
+// Avatars (src/hooks/useProfile.ts) and achievement files — diplomas,
+// certificate PDFs (src/hooks/useAchievements.ts). The project is already on
+// Blaze for Cloud Functions, so Storage's free tier covers this; see
+// storage.rules for the size/type caps.
 export const storage = getStorage(app);
 
 // Callable functions (joinByInvite, inviteToProject) — see functions/src/invites.ts.

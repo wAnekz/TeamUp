@@ -39,17 +39,17 @@ A PWA that helps high school students (14–18) in Almaty find teammates for hac
 
 ## Tech stack
 
-React + TypeScript + Vite + Tailwind · Firebase (Auth, Firestore, Cloud Functions) · TanStack Query · React Hook Form + Zod · Framer Motion · ImgBB (avatar hosting)
+React + TypeScript + Vite + Tailwind · Firebase (Auth, Firestore, Cloud Functions) · TanStack Query · React Hook Form + Zod · Framer Motion
 
 ## Getting started
 
 ```bash
 npm install
-cp .env.example .env        # fill in your Firebase project's web config + an ImgBB key
+cp env.example .env         # fill in your Firebase project's web config
 npm run dev
 ```
 
-You'll need a Firebase project with **Authentication** (Email/Password + Google) and **Firestore** enabled. Grab the web config from Project Settings → General → Your apps. Get a free ImgBB key at [api.imgbb.com](https://api.imgbb.com/) - avatars go through ImgBB; Firebase Storage is only used for achievement files.
+You'll need a Firebase project with **Authentication** (Email/Password + Google) and **Firestore** enabled. Grab the web config from Project Settings → General → Your apps.
 
 Deploy rules, indexes, and functions:
 
@@ -61,7 +61,7 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 cd functions && npm install && npm run deploy   # requires Blaze plan
 ```
 
-Achievement files use **Firebase Storage** - enable it once in the console (Build → Storage → Get started) before deploying `storage.rules`. Avatars still go through ImgBB.
+Avatars and achievement files use **Firebase Storage** - enable it once in the console (Build → Storage → Get started) before deploying `storage.rules`.
 
 Every secret a function declares must exist before `firebase deploy` will accept it. Once set, the functions are safe to run unconfigured in the sense that a placeholder value just makes email/Telegram/screening log a warning and skip:
 

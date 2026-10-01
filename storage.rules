@@ -1,9 +1,18 @@
 rules_version = '2';
 
-// Only achievement files (diplomas, certificates) live in Storage — avatars
-// go through ImgBB. Size/type caps mirror src/hooks/useAchievements.ts.
+// Avatars and achievement files (diplomas, certificates). Size/type caps
+// mirror src/hooks/useProfile.ts and src/hooks/useAchievements.ts.
 service firebase.storage {
   match /b/{bucket}/o {
+    match /avatars/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 1 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /achievements/{userId}/{fileName} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null

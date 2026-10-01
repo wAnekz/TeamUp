@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { deleteObject, getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage';
 import imageCompression from 'browser-image-compression';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import type { UserContacts, UserProfile } from '@/types';
 import { getT } from '@/i18n';
 
@@ -30,34 +31,34 @@ export function usePublicProfile(uid: string | undefined) {
   });
 }
 
+// Mirrored in storage.rules — keep both in sync.
+const AVATAR_MAX_MB = 1;
+
 /**
- * Uploads to ImgBB instead of Firebase Storage — avoids requiring the Blaze
- * billing plan just for a handful of small avatar images. Needs
- * VITE_IMGBB_API_KEY in .env (free key from https://api.imgbb.com/).
+ * Uploads to Firebase Storage under avatars/{uid}/. Each upload gets a new
+ * file name so the CacheFirst image cache in the service worker never serves
+ * the old picture; previous avatars are deleted afterwards.
  */
-export async function uploadAvatar(_uid: string, file: File): Promise<string> {
+export async function uploadAvatar(uid: string, file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error(getT().errors.uploadFailed);
   const compressed = await imageCompression(file, {
     maxSizeMB: 0.4,
     maxWidthOrHeight: 512,
     useWebWorker: true,
   });
+  if (compressed.size > AVATAR_MAX_MB * 1024 * 1024) throw new Error(getT().errors.uploadFailed);
 
-  const apiKey = import.meta.env.VITE_IMGBB_API_KEY;
-  if (!apiKey) throw new Error('Missing VITE_IMGBB_API_KEY in .env');
+  const fileRef = ref(storage, `avatars/${uid}/${Date.now()}`);
+  await uploadBytes(fileRef, compressed, { contentType: compressed.type || file.type });
+  const url = await getDownloadURL(fileRef);
 
-  const formData = new FormData();
-  formData.append('image', compressed);
+  // Best-effort cleanup — a leftover old avatar is harmless, a failed upload isn't.
+  const { items } = await listAll(ref(storage, `avatars/${uid}`)).catch(() => ({ items: [] }));
+  await Promise.all(
+    items.filter((item) => item.fullPath !== fileRef.fullPath).map((item) => deleteObject(item).catch(() => {})),
+  );
 
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error(getT().errors.uploadFailed);
-  const data = await res.json();
-  if (!data.success) throw new Error(data.error?.message ?? getT().errors.uploadFailed);
-
-  return data.data.url as string;
+  return url;
 }
 
 
