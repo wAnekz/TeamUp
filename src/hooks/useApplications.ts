@@ -124,6 +124,9 @@ export function useReviewApplication() {
             teamSizeCurrent,
             members: arrayUnion(application.applicantId),
             [`memberRoles.${application.applicantId}`]: application.roleTitle,
+            // firestore.rules only lets members grow with an application
+            // accepted in this same transaction — this tells it which one.
+            acceptedApplicationId: application.id,
             updatedAt: serverTimestamp(),
           });
         }

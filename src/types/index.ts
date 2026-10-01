@@ -258,6 +258,9 @@ export interface Project {
   // without reading `applications`, which only the applicant/owner can.
   // Optional: projects accepted before this field existed just omit the role.
   memberRoles?: Record<string, string>;
+  // Id of the last application accepted onto this team; firestore.rules
+  // checks it whenever `members` grows.
+  acceptedApplicationId?: string;
   // Set when the owner generates a team invite link — see invites/{code}.
   inviteCode?: string | null;
   // Recorded by the team lead after the event; functions/src/teamResults.ts

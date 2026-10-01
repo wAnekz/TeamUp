@@ -18,6 +18,8 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
+  arrayUnion,
 } from 'firebase/firestore';
 import { ref, uploadBytes } from 'firebase/storage';
 
@@ -123,6 +125,15 @@ describe('private data', () => {
     await assertFails(updateDoc(doc(as('bob'), 'users/alice'), { banned: true }));
     await assertSucceeds(updateDoc(doc(as('mod'), 'users/alice'), { banned: true, updatedAt: serverTimestamp() }));
   });
+
+  it('a banned student cannot lift their own ban', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'users/bob'), { banned: true }));
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { banned: false }));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob'), { banned: false }, { merge: true }));
+    await assertSucceeds(updateDoc(doc(as('bob'), 'users/bob'), { name: 'Bob B' }));
+    await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { uid: 'fresh', banned: false }));
+    await assertSucceeds(setDoc(doc(as('fresh'), 'users/fresh'), { uid: 'fresh' }));
+  });
 });
 
 describe('contacts', () => {
@@ -199,6 +210,70 @@ describe('teams and applications', () => {
     await assertFails(setDoc(doc(as('bob'), 'invites/BOBCODE1234'), invite));
     await assertSucceeds(setDoc(doc(as('alice'), 'invites/ALICECODE12'), { ...invite, ownerId: 'alice' }));
     await assertFails(updateDoc(doc(as('bob'), 'invites/CODE123456'), { active: false }));
+  });
+});
+
+describe('team membership (it unlocks contacts)', () => {
+  const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', ownerId: 'alice', status: 'pending', message: 'hi' };
+  const applyAsBob = () => setDoc(doc(as('bob'), 'applications/p1_r1_bob'), app);
+  const accept = (member: string, appId = 'p1_r1_bob') => {
+    const db = as('alice');
+    const batch = writeBatch(db);
+    batch.update(doc(db, `applications/${appId}`), { status: 'accepted', updatedAt: serverTimestamp() });
+    batch.update(doc(db, 'projects/p1'), { members: arrayUnion(member), acceptedApplicationId: appId });
+    return batch.commit();
+  };
+
+  it('a new project cannot come with a prefilled team', async () => {
+    const p = { title: 'P2', authorId: 'bob', status: 'open', isDraft: false };
+    await assertFails(setDoc(doc(as('bob'), 'projects/p2'), { ...p, members: ['alice'] }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'projects/p2'), { ...p, members: [] }));
+  });
+
+  it('the owner cannot add someone who did not apply', async () => {
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['bob'] }));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['bob'], acceptedApplicationId: 'p1_r1_bob' }));
+  });
+
+  it('accepting a real application adds exactly that applicant', async () => {
+    await assertSucceeds(applyAsBob());
+    await assertFails(accept('carol'));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['bob'], acceptedApplicationId: 'p1_r1_bob' })); // still pending
+    await assertSucceeds(accept('bob'));
+  });
+
+  it('an application to another project does not count', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'applications/p9_r1_bob'), { ...app, projectId: 'p9', ownerId: 'alice' }),
+    );
+    await assertFails(accept('bob', 'p9_r1_bob'));
+  });
+
+  it('the owner can remove members but not hand the project over', async () => {
+    await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'projects/p1'), { members: ['bob', 'carol'] }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'projects/p1'), { members: ['carol'] }));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { authorId: 'bob' }));
+  });
+});
+
+describe('applications and posts keep their owners', () => {
+  const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', ownerId: 'alice', status: 'pending', message: 'hi' };
+
+  it('an application must go to the real project owner', async () => {
+    await assertFails(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), { ...app, ownerId: 'carol' }));
+  });
+
+  it('the owner may only accept or reject', async () => {
+    await assertSucceeds(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), app));
+    await assertFails(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { ownerId: 'carol' }));
+    await assertFails(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { message: 'edited' }));
+    await assertFails(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { status: 'whatever' }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'applications/p1_r1_bob'), { status: 'rejected', updatedAt: serverTimestamp() }));
+  });
+
+  it('a looking-for-team post cannot be handed to someone else', async () => {
+    await assertFails(updateDoc(doc(as('alice'), 'lookingForTeam/l1'), { authorId: 'bob' }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'lookingForTeam/l1'), { active: false }));
   });
 });
 

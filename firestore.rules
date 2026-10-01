@@ -35,10 +35,14 @@ service cloud.firestore {
     // ---------------- users ----------------
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId) && !('contacts' in request.resource.data);
+      allow create: if isOwner(userId)
+        && !('contacts' in request.resource.data)
+        && !('banned' in request.resource.data);
       allow update: if (isOwner(userId)
         && request.resource.data.uid == userId
         && !('email' in request.resource.data)
+        // Bans are moderator-only: a banned student must not lift their own.
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['banned'])
         // Contacts moved to private/contacts: they may be removed from the
         // public profile (migration) but never added or changed here.
         && (!('contacts' in request.resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['contacts'])))
@@ -135,10 +139,37 @@ service cloud.firestore {
       allow create: if hasCompletedProfile()
         && isEmailVerified()
         && request.resource.data.authorId == request.auth.uid
-        && request.resource.data.status in ['open', 'closed', 'archived'];
+        && request.resource.data.status in ['open', 'closed', 'archived']
+        // Teammates gain access to each other's contacts (functions/src/contacts.ts),
+        // so a team starts empty and grows only through accepted applications.
+        && request.resource.data.get('members', []).size() == 0;
 
-      allow update: if isOwner(resource.data.authorId) || isViewCountIncrement();
+      allow update: if (isOwner(resource.data.authorId)
+          && request.resource.data.authorId == resource.data.authorId
+          && isValidTeamChange())
+        || isViewCountIncrement();
       allow delete: if isOwner(resource.data.authorId) || isModerator();
+
+      // members may stay the same, shrink (owner removes someone), or grow by
+      // exactly one student whose application to this project is accepted in
+      // the same transaction (useReviewApplication passes its id as
+      // acceptedApplicationId). Invite-link joins go through joinByInvite.
+      function isValidTeamChange() {
+        let before = resource.data.get('members', []);
+        let after = request.resource.data.get('members', []);
+        return before.toSet().hasAll(after.toSet()) || isAcceptedJoin(before, after);
+      }
+
+      function isAcceptedJoin(before, after) {
+        let appId = request.resource.data.get('acceptedApplicationId', '');
+        let appPath = /databases/$(database)/documents/applications/$(appId);
+        return appId is string && appId.size() > 0
+          && after.size() == before.size() + 1
+          && exists(appPath)
+          && get(appPath).data.projectId == projectId
+          && after.toSet().difference(before.toSet()) == [get(appPath).data.applicantId].toSet()
+          && getAfter(appPath).data.status == 'accepted';
+      }
 
       function isViewCountIncrement() {
         return isSignedIn()
@@ -180,14 +211,15 @@ service cloud.firestore {
         && request.resource.data.applicantId == request.auth.uid
         && request.resource.data.status == 'pending'
         && request.resource.data.ownerId != request.auth.uid
+        && request.resource.data.ownerId == get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.authorId
         && !('viaInvite' in request.resource.data) // set only by joinByInvite
         && applicationId == request.resource.data.projectId + '_' + request.resource.data.roleId + '_' + request.resource.data.applicantId;
 
+      // The project owner only decides; everything else on the application is fixed.
       allow update: if isSignedIn()
         && resource.data.ownerId == request.auth.uid
-        && request.resource.data.applicantId == resource.data.applicantId
-        && request.resource.data.projectId == resource.data.projectId
-        && request.resource.data.roleId == resource.data.roleId;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['accepted', 'rejected'];
 
       allow delete: if false;
     }
@@ -196,7 +228,8 @@ service cloud.firestore {
     match /lookingForTeam/{postId} {
       allow read: if isSignedIn();
       allow create: if hasCompletedProfile() && isEmailVerified() && request.resource.data.authorId == request.auth.uid;
-      allow update: if isOwner(resource.data.authorId);
+      allow update: if isOwner(resource.data.authorId)
+        && request.resource.data.authorId == resource.data.authorId;
       allow delete: if isOwner(resource.data.authorId);
     }
 
