@@ -73,6 +73,14 @@ export const ru: Dict = {
     today: 'сегодня',
     inDays: (n) => `через ${n} дн.`,
   },
+  theme: {
+    title: 'Тема',
+    light: 'Светлая',
+    dark: 'Тёмная',
+    system: 'Как в системе',
+    toDark: 'Включить тёмную тему',
+    toLight: 'Включить светлую тему',
+  },
   validation: {
     linkHttps: 'Ссылка должна начинаться с https://',
     nameShort: 'Слишком короткое имя',

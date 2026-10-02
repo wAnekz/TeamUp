@@ -74,6 +74,14 @@ export const kz: Dict = {
     today: 'бүгін',
     inDays: (n) => `${n} күннен кейін`,
   },
+  theme: {
+    title: 'Тақырып',
+    light: 'Жарық',
+    dark: 'Қараңғы',
+    system: 'Жүйедегідей',
+    toDark: 'Қараңғы тақырыпты қосу',
+    toLight: 'Жарық тақырыпты қосу',
+  },
   validation: {
     linkHttps: 'Сілтеме https:// деп басталуы керек',
     nameShort: 'Аты тым қысқа',

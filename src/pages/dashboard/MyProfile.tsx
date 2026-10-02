@@ -26,6 +26,7 @@ import { SKILL_CATEGORIES, SKILL_LEVEL_OPTIONS, INTEREST_CATEGORIES, GRADE_OPTIO
 import { profileSchema, type ProfileFormValues } from '@/utils/validation';
 import { scrollToFirstError } from '@/utils/formErrors';
 import type { Skill, SkillLevel, Interest, Grade } from '@/types';
+import { ThemePicker } from '@/components/ui/ThemeToggle';
 
 export default function MyProfile() {
   const { user, profile, refreshProfile, signOut } = useAuth();
@@ -416,6 +417,10 @@ export default function MyProfile() {
         <div className="mb-4 flex items-center justify-between gap-3 border-b border-surface-100 pb-3.5">
           <p className="text-sm text-surface-800">{t.language}</p>
           <LanguageSwitcher compact />
+        </div>
+
+        <div className="mb-4 border-b border-surface-100 pb-3.5">
+          <ThemePicker />
         </div>
 
         <div className="flex items-center justify-between gap-3">

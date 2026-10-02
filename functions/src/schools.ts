@@ -1,5 +1,6 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
+import almatySchools from './data/schools-almaty.json';
 
 /**
  * schools/{id} directory behind the SchoolPicker. Two jobs, both run from
@@ -27,7 +28,11 @@ export function schoolDocId(name: string, city: string | null | undefined) {
   return `${part(name)}__${part(city ?? '') || 'kz'}`;
 }
 
-// Only schools we're sure exist; everything else students add themselves.
+// Every state and private school in Almaty (city education register,
+// open-almaty.kz, Oct 2026). Also loaded by the client's SchoolPicker.
+const ALMATY_SCHOOLS: { name: string; aliases: string[] }[] = almatySchools;
+
+// Other well-known schools; everything else students add themselves.
 const SEED: { name: string; city: string; aliases: string[] }[] = [
   { name: 'НИШ ФМН г. Алматы', city: 'Алматы', aliases: ['NIS PhM Almaty', 'НЗМ ФМБ Алматы', 'Назарбаев Интеллектуальная школа физмат Алматы'] },
   { name: 'НИШ ХБН г. Алматы', city: 'Алматы', aliases: ['NIS ChB Almaty', 'НЗМ ХББ Алматы', 'Назарбаев Интеллектуальная школа химбио Алматы'] },
@@ -42,22 +47,36 @@ const SEED: { name: string; city: string; aliases: string[] }[] = [
 
 export async function ensureSeedSchools() {
   const db = getFirestore();
+  const all = [...SEED, ...ALMATY_SCHOOLS.map((s) => ({ ...s, city: 'Алматы' }))];
   let created = 0;
-  for (const s of SEED) {
-    const ref = db.doc(`schools/${schoolDocId(s.name, s.city)}`);
-    if ((await ref.get()).exists) continue;
-    await ref.set({
-      name: s.name,
-      city: s.city,
-      key: normalizeSchool(s.name),
-      aliases: s.aliases,
-      verified: true,
-      createdBy: 'system',
-      createdAt: FieldValue.serverTimestamp(),
+  let verified = 0;
+  for (let i = 0; i < all.length; i += 100) {
+    const chunk = all.slice(i, i + 100);
+    const refs = chunk.map((s) => db.doc(`schools/${schoolDocId(s.name, s.city)}`));
+    const snaps = await db.getAll(...refs);
+    const batch = db.batch();
+    snaps.forEach((snap, k) => {
+      const s = chunk[k];
+      if (!snap.exists) {
+        batch.set(refs[k], {
+          name: s.name,
+          city: s.city,
+          key: normalizeSchool(s.name),
+          aliases: s.aliases,
+          verified: true,
+          createdBy: 'system',
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        created++;
+      } else if (snap.data()?.verified !== true) {
+        // A student added it before it was on the official list.
+        batch.update(refs[k], { verified: true, aliases: s.aliases });
+        verified++;
+      }
     });
-    created++;
+    await batch.commit();
   }
-  if (created) logger.info(`ensureSeedSchools: added ${created} school(s)`);
+  if (created || verified) logger.info(`ensureSeedSchools: added ${created}, verified ${verified} school(s)`);
 }
 
 export async function linkFreeTextSchools() {
