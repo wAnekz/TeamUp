@@ -8,6 +8,7 @@ import { cn } from '@/utils/cn';
 import { useLang, type Lang } from '@/lib/lang';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { useT } from '@/i18n';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 // Lazy: its modal pulls in framer-motion and the form libraries, which the
 // first screen (landing) doesn't need.
@@ -60,6 +61,7 @@ export function Navbar() {
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Suspense fallback={null}>
               <FeedbackButton variant="icon" />
             </Suspense>
@@ -140,6 +142,7 @@ function GuestNavbar() {
           </nav>
           <div className="flex items-center gap-2">
             <LanguageSwitcher compact className="hidden md:flex" />
+            <ThemeToggle />
             <Link
               to="/login"
               className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-surface-700 hover:bg-surface-100"

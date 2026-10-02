@@ -11,6 +11,7 @@ import { formatDeadline } from '@/utils/dates';
 import { cn } from '@/utils/cn';
 import { useT } from '@/i18n';
 import type { EventFormat, EventItem } from '@/types';
+import { EventImage } from '@/components/events/EventImage';
 
 const FORMAT_ICON: Record<EventFormat, typeof Globe> = { online: Globe, offline: MapPin, hybrid: Globe };
 const DAY = 24 * 60 * 60 * 1000;
@@ -109,7 +110,7 @@ function EventRow({ event: ev, interested }: { event: EventItem; interested: boo
   return (
     <Link to={`/events/${ev.id}`} className="block">
       <Card className="flex gap-3 transition-colors hover:border-accent-300">
-        {ev.imageUrl && <img src={ev.imageUrl} alt="" className="h-20 w-20 shrink-0 rounded-xl object-cover" />}
+        <EventImage src={ev.imageUrl} className="h-20 w-20 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <h2 className="font-semibold text-surface-900">{ev.title}</h2>
@@ -118,7 +119,7 @@ function EventRow({ event: ev, interested }: { event: EventItem; interested: boo
             </Badge>
           </div>
           <p className="mt-1 line-clamp-2 text-sm text-surface-500">{ev.description}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-surface-400">
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-surface-500">
             <span className="flex items-center gap-1">
               <Calendar size={12} /> {formatDeadline(ev.date)}
             </span>
@@ -138,7 +139,7 @@ function EventRow({ event: ev, interested }: { event: EventItem; interested: boo
               </span>
             )}
             {regDaysLeft !== null && regDaysLeft >= 0 && regDaysLeft <= 7 && (
-              <span className="flex items-center gap-1 font-medium text-amber-600">
+              <span className="flex items-center gap-1 font-medium text-amber-700">
                 <Clock size={12} /> {t.regCloses(regDaysLeft === 0 ? tAll.dates.today : tAll.dates.inDays(regDaysLeft))}
               </span>
             )}

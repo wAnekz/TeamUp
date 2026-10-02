@@ -34,3 +34,6 @@ npm-debug.log*
 
 # netlify cli
 .netlify/
+
+# Finder/iCloud duplicate copies ("file 2.ts")
+* 2.*

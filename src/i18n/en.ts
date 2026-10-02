@@ -79,6 +79,14 @@ export const en = {
     today: 'today',
     inDays: (n: number) => `in ${n}d`,
   },
+  theme: {
+    title: 'Theme',
+    light: 'Light',
+    dark: 'Dark',
+    system: 'System',
+    toDark: 'Switch to dark theme',
+    toLight: 'Switch to light theme',
+  },
   validation: {
     linkHttps: 'Link should start with https://',
     nameShort: 'Name is too short',

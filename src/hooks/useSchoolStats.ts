@@ -33,11 +33,24 @@ export function useSchools() {
     queryKey: ['schools'],
     staleTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const snap = await getDocs(collection(db, 'schools'));
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as SchoolItem);
+      // The full Almaty list ships with the app (same file the server seeds
+      // from), so every school is findable even before its doc exists.
+      const [snap, almaty] = await Promise.all([
+        getDocs(collection(db, 'schools')),
+        import('../../functions/src/data/schools-almaty.json').then((m) => m.default as { name: string; aliases: string[] }[]),
+      ]);
+      const byId = new Map<string, SchoolItem>();
+      for (const s of almaty) {
+        const id = schoolDocId(s.name, ALMATY);
+        byId.set(id, { id, name: s.name, city: ALMATY, key: normalizeSchool(s.name), aliases: s.aliases, verified: true });
+      }
+      for (const d of snap.docs) byId.set(d.id, { id: d.id, ...d.data() } as SchoolItem);
+      return [...byId.values()];
     },
   });
 }
+
+const ALMATY = 'Алматы';
 
 export function useAddSchool() {
   const qc = useQueryClient();

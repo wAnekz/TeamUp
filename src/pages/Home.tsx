@@ -10,6 +10,7 @@ import { currentSeason, formatSeason } from '@/constants/gamification';
 import { useLang, type Lang } from '@/lib/lang';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import type { Timestamp } from 'firebase/firestore';
+import { EventImage } from '@/components/events/EventImage';
 
 const STEP_ICONS = [UserRound, Users, Trophy];
 
@@ -42,7 +43,8 @@ const T = {
     interested: (n: number) => `${n} школьников интересуются`,
     projects: 'Команды ищут людей',
     allProjects: 'Все проекты',
-    noProjects: 'Пока нет проектов - зарегистрируйся и создай первую команду.',
+    noProjects: 'Пока никто не опубликовал проект. Создай первую команду - её увидят все школьники на TeamUp.',
+    createFirst: 'Создать команду',
     leaderboard: 'Рейтинг школ',
     seasonStarted: 'Сезон только начался - твоя школа может стать №1.',
     seeRanking: 'Смотреть рейтинг →',
@@ -52,13 +54,6 @@ const T = {
     finalTitle: 'Готов найти команду?',
     finalText: 'Бесплатно и только для школьников. Твои контакты видят только те, кого ты принял в команду.',
     ctaStart: 'Начать',
-    exampleTitle: 'Так выглядят команды на TeamUp',
-    exampleBadge: 'Пример',
-    examples: [
-      { title: 'Чат-бот со школьным расписанием', kind: 'Хакатон', roles: ['Frontend', 'Дизайнер'] },
-      { title: 'Сборная на олимпиаду по робототехнике', kind: 'Олимпиада', roles: ['Arduino', 'Инженер'] },
-      { title: 'Приложение для школьных волонтёров', kind: 'Проект', roles: ['Backend', 'SMM'] },
-    ],
     faqTitle: 'Частые вопросы',
     faq: [
       { q: 'Это бесплатно?', a: 'Да, полностью. Без рекламы и платных функций.' },
@@ -106,7 +101,8 @@ const T = {
     interested: (n: number) => `${n} оқушы қызығушылық танытты`,
     projects: 'Адам іздеп жүрген командалар',
     allProjects: 'Барлық жобалар',
-    noProjects: 'Әзірге жоба жоқ - тіркеліп, алғашқы команданы аш.',
+    noProjects: 'Әзірге ешкім жоба жарияламады. Алғашқы команданы аш - оны TeamUp-тағы барлық оқушы көреді.',
+    createFirst: 'Команда ашу',
     leaderboard: 'Мектептер рейтингі',
     seasonStarted: 'Маусым жаңа басталды - сенің мектебің №1 бола алады.',
     seeRanking: 'Рейтингті көру →',
@@ -116,13 +112,6 @@ const T = {
     finalTitle: 'Команда табуға дайынсың ба?',
     finalText: 'Тегін және тек оқушыларға арналған. Байланыс деректеріңді тек командаға қабылдаған адамдарың көреді.',
     ctaStart: 'Бастау',
-    exampleTitle: 'TeamUp-тағы командалар осындай',
-    exampleBadge: 'Мысал',
-    examples: [
-      { title: 'Мектеп кестесі бар чат-бот', kind: 'Хакатон', roles: ['Frontend', 'Дизайнер'] },
-      { title: 'Робототехника олимпиадасына құрама', kind: 'Олимпиада', roles: ['Arduino', 'Инженер'] },
-      { title: 'Мектеп волонтерлеріне қосымша', kind: 'Жоба', roles: ['Backend', 'SMM'] },
-    ],
     faqTitle: 'Жиі қойылатын сұрақтар',
     faq: [
       { q: 'Бұл тегін бе?', a: 'Иә, толығымен. Жарнама мен ақылы функциялар жоқ.' },
@@ -170,7 +159,8 @@ const T = {
     interested: (n: number) => `${n} students interested`,
     projects: 'Teams looking for people',
     allProjects: 'All projects',
-    noProjects: 'Be the first to post a project - sign up and start a team.',
+    noProjects: 'Nobody has posted a project yet. Start the first team - every student on TeamUp will see it.',
+    createFirst: 'Start a team',
     leaderboard: 'School leaderboard',
     seasonStarted: 'The season just started - your school could be #1.',
     seeRanking: 'See the ranking →',
@@ -180,13 +170,6 @@ const T = {
     finalTitle: 'Ready to find your team?',
     finalText: 'Free, for students only. Your contacts are shown only to teammates you accept.',
     ctaStart: 'Get started',
-    exampleTitle: 'What teams on TeamUp look like',
-    exampleBadge: 'Example',
-    examples: [
-      { title: 'Chat bot for the school timetable', kind: 'Hackathon', roles: ['Frontend', 'Designer'] },
-      { title: 'Robotics olympiad squad', kind: 'Olympiad', roles: ['Arduino', 'Engineer'] },
-      { title: 'App for school volunteers', kind: 'Project', roles: ['Backend', 'Social media'] },
-    ],
     faqTitle: 'FAQ',
     faq: [
       { q: 'Is it free?', a: 'Yes, completely. No ads, no paid features.' },
@@ -296,7 +279,7 @@ export default function Home() {
           {upcoming.map((ev) => (
             <Link key={ev.id} to={`/events/${ev.id}`}>
               <Card className="h-full transition-colors hover:border-accent-300">
-                {ev.imageUrl && <img src={ev.imageUrl} alt="" className="mb-3 h-28 w-full rounded-xl object-cover" />}
+                <EventImage src={ev.imageUrl} className="mb-3 h-28 w-full" />
                 <p className="line-clamp-2 font-semibold text-surface-900">{ev.title}</p>
                 <p className="mt-1 flex items-center gap-1 text-xs text-surface-500">
                   <Calendar size={12} /> {formatDate(ev.date, lang)}
@@ -316,29 +299,12 @@ export default function Home() {
         <SectionHeader title={t.projects} to="/feed" linkText={t.allProjects} />
         {loadingProjects && <Skeleton className="h-40" />}
         {!loadingProjects && fresh.length === 0 && (
-          <>
-            <p className="mb-3 text-sm text-surface-500">{t.exampleTitle}</p>
-            <ul className="grid gap-3 sm:grid-cols-3">
-              {t.examples.map((ex) => (
-                <li key={ex.title}>
-                  <Card className="h-full">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-accent-700">{ex.kind}</span>
-                      <span className="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-600">{t.exampleBadge}</span>
-                    </div>
-                    <p className="mt-2 font-semibold text-surface-900">{ex.title}</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {ex.roles.map((r) => (
-                        <span key={r} className="rounded-lg bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700">
-                          {r}
-                        </span>
-                      ))}
-                    </div>
-                  </Card>
-                </li>
-              ))}
-            </ul>
-          </>
+          <Card className="text-center">
+            <p className="text-sm text-surface-600">{t.noProjects}</p>
+            <Link to="/login?mode=signup" className="mt-3 inline-block">
+              <Button size="sm">{t.createFirst}</Button>
+            </Link>
+          </Card>
         )}
         <div className="grid gap-4 sm:grid-cols-3">
           {fresh.map((p) => (

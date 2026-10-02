@@ -14,6 +14,7 @@ import { useT } from '@/i18n';
 import { cn } from '@/utils/cn';
 import type { EventItem } from '@/types';
 import { safeUrl } from '@/utils/safeUrl';
+import { EventImage } from '@/components/events/EventImage';
 
 function toDateInput(ts: EventItem['date'] | null | undefined) {
   return ts ? ts.toDate().toISOString().slice(0, 10) : '';
@@ -91,7 +92,7 @@ export default function EventDetail() {
       </div>
 
       <Card>
-        {event.imageUrl && <img src={event.imageUrl} alt="" className="mb-4 h-40 w-full rounded-xl object-cover" />}
+        {event.imageUrl && <EventImage src={event.imageUrl} className="mb-4 h-40 w-full" />}
 
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-xl font-bold text-surface-900">{event.title}</h1>
@@ -221,7 +222,7 @@ export default function EventDetail() {
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-medium text-surface-700">{t.whoInterested(subscribers.length)}</p>
-            {lookingCount > 0 && <span className="text-xs text-surface-400">{t.lookingCount(lookingCount)}</span>}
+            {lookingCount > 0 && <span className="text-xs text-surface-500">{t.lookingCount(lookingCount)}</span>}
           </div>
           <div className="space-y-2">
             {subscribers.slice(0, 30).map((s) => (
@@ -229,7 +230,7 @@ export default function EventDetail() {
                 <Avatar src={s.userAvatarUrl} name={s.userName} size={30} />
                 <span className="flex-1 truncate text-sm text-surface-800">
                   {s.userName}
-                  {s.uid === user?.uid && <span className="text-surface-400"> ({tAll.common.you})</span>}
+                  {s.uid === user?.uid && <span className="text-surface-500"> ({tAll.common.you})</span>}
                 </span>
                 {s.lookingForTeam && <Badge tone="green">{t.lookingBadge}</Badge>}
               </Link>

@@ -12,6 +12,7 @@ import { toast } from '@/lib/toast';
 import App from './App';
 import './index.css';
 import '@fontsource-variable/inter';
+import '@/lib/theme';
 
 // Foreground pushes (app tab already open/focused) don't trigger a system
 // notification on their own — only background ones do, via
