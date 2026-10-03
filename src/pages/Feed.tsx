@@ -5,7 +5,7 @@ import { ProjectCard } from '@/components/projects/ProjectCard';
 import { ProjectFilterPanel } from '@/components/projects/ProjectFilterPanel';
 import { ErrorState, Skeleton } from '@/components/ui/primitives';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { GettingStarted } from '@/components/onboarding/GettingStarted';
 import { Button } from '@/components/ui/Button';
 import { useT } from '@/i18n';

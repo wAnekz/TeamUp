@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { EventDraft, EventItem, EventResource, EventSubscription } from '@/types';
+import type { DescriptionI18n, EventDraft, EventItem, EventResource, EventSubscription } from '@/types';
 
 // Public list — everyone signed in sees active events, soonest first.
 export function useEventsList() {
@@ -60,6 +60,11 @@ export interface EventInput {
   imageUrl?: string | null;
   resources?: EventResource[];
   sourceUrl?: string | null;
+  country?: string | null; // 'KZ' or null
+  hidden?: boolean;
+  // Kept only while the description is unchanged (EventFormModal clears it
+  // on edit), so a translation never contradicts what the moderator wrote.
+  descriptionI18n?: DescriptionI18n | null;
 }
 
 function eventFields(input: EventInput) {
@@ -78,6 +83,9 @@ function eventFields(input: EventInput) {
     imageUrl: input.imageUrl || null,
     resources: (input.resources ?? []).filter((r) => r.title.trim() && r.url.trim()),
     sourceUrl: input.sourceUrl ?? null,
+    country: input.country || null,
+    hidden: input.hidden ?? false,
+    descriptionI18n: input.descriptionI18n ?? null,
   };
 }
 

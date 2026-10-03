@@ -2,7 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { Card, Badge, Avatar, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useInvite, useJoinByInvite } from '@/hooks/useInvites';
 import { useProject } from '@/hooks/useProjects';
 import { formatMembers } from '@/utils/projectStatus';

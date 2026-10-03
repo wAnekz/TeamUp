@@ -20,7 +20,7 @@ import { ContactLinks } from '@/components/profile/ContactLinks';
 import { ReportButton } from '@/components/ReportButton';
 import { formatDeadline, isDeadlinePassed, timeAgo } from '@/utils/dates';
 import { displayStatusLabel, DISPLAY_STATUS_TONE, formatMembers, getApplyBlockedReason, getDisplayStatus, hasAppliedToRole } from '@/utils/projectStatus';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { cn } from '@/utils/cn';
 import { toast } from '@/lib/toast';
 import type { ProjectRole } from '@/types';

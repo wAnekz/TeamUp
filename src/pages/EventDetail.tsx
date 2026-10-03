@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Users, ArrowLeft, Globe, Trophy, ExternalLink, Clock, Trash2, Heart, Pencil, BookOpen } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useIsModerator } from '@/hooks/useReports';
 import { useEvent, useDeleteEvent, useEventSubscribers, useToggleEventSubscription } from '@/hooks/useEvents';
 import { Card, Skeleton, Badge, Avatar } from '@/components/ui/primitives';
@@ -11,6 +11,8 @@ import { formatDeadline, isDeadlinePassed } from '@/utils/dates';
 import { toast } from '@/lib/toast';
 import { useAuthGate } from '@/hooks/useAuthGate';
 import { useT } from '@/i18n';
+import { useLang } from '@/lib/lang';
+import { eventDescription } from '@/utils/events';
 import { cn } from '@/utils/cn';
 import type { EventItem } from '@/types';
 import { safeUrl } from '@/utils/safeUrl';
@@ -35,10 +37,12 @@ export default function EventDetail() {
   const [editing, setEditing] = useState(false);
   const tAll = useT();
   const t = tAll.events;
+  const lang = useLang();
 
   if (isLoading) return <Skeleton className="mx-auto h-64 max-w-xl" />;
 
-  if (!event) {
+  // Hidden events (failed the audience check) are for moderators to review.
+  if (!event || (event.hidden && !isModerator)) {
     return <p className="mx-auto max-w-xl text-center text-sm text-surface-500">{t.notFound}</p>;
   }
 
@@ -95,7 +99,14 @@ export default function EventDetail() {
         {event.imageUrl && <EventImage src={event.imageUrl} className="mb-4 h-40 w-full" />}
 
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-xl font-bold text-surface-900">{event.title}</h1>
+          <h1 className="text-xl font-bold text-surface-900">
+            {event.title}
+            {event.hidden && (
+              <Badge tone="yellow" className="ml-2 align-middle">
+                {t.hiddenBadge}
+              </Badge>
+            )}
+          </h1>
           <Badge tone={format === 'online' ? 'accent' : format === 'hybrid' ? 'yellow' : 'gray'}>
             {tAll.format[format]}
           </Badge>
@@ -137,7 +148,14 @@ export default function EventDetail() {
           </div>
         )}
 
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-surface-700">{event.description}</p>
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-surface-700">{eventDescription(event, lang)}</p>
+        {event.sourceText && event.descriptionI18n && (
+          <details className="mt-2 text-sm">
+            <summary className="inline-flex min-h-11 cursor-pointer items-center text-accent-600">{t.original}</summary>
+            <p className="whitespace-pre-wrap text-surface-600">{event.sourceText}</p>
+          </details>
+        )}
+        {isModerator && event.audience && <p className="mt-2 text-xs text-surface-500">{t.audience(event.audience)}</p>}
 
         {event.registrationDeadline && (
           <p className="mt-4 flex items-center gap-1.5 text-xs text-surface-500">
@@ -261,6 +279,9 @@ export default function EventDetail() {
             imageUrl: event.imageUrl ?? '',
             resources: event.resources ?? [],
             sourceUrl: event.sourceUrl ?? null,
+            country: event.country ?? null,
+            hidden: !!event.hidden,
+            descriptionI18n: event.descriptionI18n ?? null,
           }}
         />
       )}

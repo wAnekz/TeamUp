@@ -3,7 +3,7 @@ import { Clock, Eye, Star, Users } from 'lucide-react';
 import { Card, Badge, Avatar } from '@/components/ui/primitives';
 import { formatDeadline, isDeadlinePassed, timeAgo } from '@/utils/dates';
 import { displayStatusLabel, DISPLAY_STATUS_TONE, formatMembers, getDisplayStatus } from '@/utils/projectStatus';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useSavedProjectIds, useToggleSaveProject } from '@/hooks/useSavedProjects';
 import { useAuthGate } from '@/hooks/useAuthGate';
 import { interestLabel, useT } from '@/i18n';

@@ -34,12 +34,22 @@ const MIN_DAYS_LEFT = 5; // not worth a moderator's time if it closes this week
 const EVENT_KEYWORDS =
   /хакатон|hackathon|олимпиад|olympiad|конкурс|competition|чемпионат|championship|турнир|tournament|кейс|challenge|байқау|жарыс|челлендж|contest|жоба|грант/i;
 
+export interface DescriptionI18n {
+  ru: string;
+  kz: string;
+  en: string;
+}
+
 interface DraftFields {
   source: 'devpost' | 'telegram';
   sourceUrl: string;
   sourceText?: string | null;
   title: string;
   description: string;
+  descriptionI18n?: DescriptionI18n | null;
+  // ISO country code when the event is tied to one (Telegram sources are
+  // Kazakhstani channels); null for worldwide online events.
+  country?: string | null;
   date: Timestamp | null;
   registrationDeadline: Timestamp | null;
   format: 'online' | 'offline' | 'hybrid';
@@ -102,15 +112,125 @@ export function devpostEndDate(range: string | undefined): Timestamp | null {
   return Number.isNaN(d.getTime()) ? null : Timestamp.fromDate(d);
 }
 
-export async function collectDevpost(): Promise<DraftFields[]> {
-  const out: DraftFields[] = [];
+// ---------------- audience (Devpost) ----------------
+
+/**
+ * TeamUp is for 14-18 year olds in Kazakhstan, but Devpost lists mostly
+ * adult and corporate hackathons. Each hackathon page has a "Who can
+ * participate" block ("Ages 13+ only", "Above legal age of majority...",
+ * "Only specific countries/territories included"). Only keep events that
+ * explicitly let someone under 18 in and don't shut Kazakhstan out; no
+ * block, no publish, since we can't tell.
+ */
+export function devpostAudience(eligibility: string | null): { ok: boolean; reason: string } {
+  if (!eligibility) return { ok: false, reason: 'no eligibility info on the page' };
+  const e = eligibility.toLowerCase();
+  if (/legal age of majority|ages? 1[89]\+|ages? 2\d\+/.test(e)) return { ok: false, reason: 'adults only (18+)' };
+  if (/professionals|post ?grads|college students only|university students only/.test(e)) {
+    return { ok: false, reason: 'not open to school students' };
+  }
+  if (/only specific countries/.test(e) && !e.includes('kazakhstan')) return { ok: false, reason: 'Kazakhstan not eligible' };
+  if (/specific countries\/territories excluded/.test(e) && e.includes('kazakhstan')) {
+    return { ok: false, reason: 'Kazakhstan excluded' };
+  }
+  const range = e.match(/ages? (\d{1,2})(?:\+| to (\d{1,2}))/);
+  if (!range) return { ok: false, reason: 'age not stated' };
+  const min = Number(range[1]);
+  const max = range[2] ? Number(range[2]) : 99;
+  if (min > 17 || max < 14) return { ok: false, reason: `ages ${min}-${max === 99 ? '' : max}` };
+  return { ok: true, reason: `ages ${min}${max === 99 ? '+' : `-${max}`}` };
+}
+
+/** "Who can participate" block and the tagline from a hackathon's page. */
+export function parseDevpostPage(html: string): { eligibility: string | null; tagline: string | null } {
+  // Tags become spaces so "<li>Ages 13+</li><li>Students only</li>" doesn't glue words together.
+  const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  const text = decodeHtml(body).replace(/\s+/g, ' ');
+  const eligibility = text.match(/Who can participate(.*?)View full rules/i)?.[1]?.trim().slice(0, 600) ?? null;
+  const meta =
+    html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]*)"/i)?.[1] ??
+    html.match(/<meta[^>]+name="description"[^>]+content="([^"]*)"/i)?.[1] ??
+    null;
+  return { eligibility, tagline: meta ? decodeHtml(meta).slice(0, 600) : null };
+}
+
+const BROWSER_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36';
+
+async function fetchDevpostPage(url: string) {
+  const res = await fetch(url, { headers: { 'User-Agent': BROWSER_UA } });
+  if (!res.ok) throw new Error(`Devpost page ${url} returned ${res.status}`);
+  return parseDevpostPage(await res.text());
+}
+
+// ---------------- RU/KZ/EN blurbs ----------------
+
+const SUMMARY_PROMPT = `You write event blurbs for TeamUp, an app where school students in Kazakhstan
+(ages 14-18) find teammates for hackathons and olympiads.
+From the event info below, write 1-2 short, plain sentences: what the event is and who can join.
+Friendly and concrete, no hype, no emojis, no em dashes. Don't invent prizes, dates or rules that aren't given.
+Write the same blurb in Russian ("ru"), Kazakh ("kz") and English ("en").
+Respond with ONLY a JSON object: {"ru": string, "kz": string, "en": string}`;
+
+export async function summarizeEvent(info: string, apiKey: string): Promise<DescriptionI18n | null> {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'openai/gpt-oss-120b',
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SUMMARY_PROMPT },
+        { role: 'user', content: info.slice(0, 3000) },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    logger.warn(`Groq summary returned ${res.status}`, await res.text());
+    return null;
+  }
+  const data = (await res.json()) as { choices: [{ message: { content: string } }] };
+  try {
+    return toI18n(JSON.parse(data.choices[0]?.message?.content ?? '{}'));
+  } catch {
+    return null;
+  }
+}
+
+function toI18n(v: unknown): DescriptionI18n | null {
+  const o = v as Record<string, unknown> | null;
+  const ok = (x: unknown) => typeof x === 'string' && x.trim().length > 0;
+  if (!o || !ok(o.ru) || !ok(o.kz) || !ok(o.en)) return null;
+  const clean = (x: unknown) => String(x).replace(/\u2014|\u2013/g, '-').trim().slice(0, 400);
+  return { ru: clean(o.ru), kz: clean(o.kz), en: clean(o.en) };
+}
+
+function devpostInfo(d: { title: string; organizer: string | null; themes?: string; dates?: string; tagline: string | null; eligibility: string | null }) {
+  return [
+    `Title: ${d.title}`,
+    d.organizer && `Organizer: ${d.organizer}`,
+    d.themes && `Themes: ${d.themes}`,
+    d.dates && `Submission period: ${d.dates}`,
+    'Format: online (Devpost)',
+    d.tagline && `Tagline: ${d.tagline}`,
+    d.eligibility && `Who can participate: ${d.eligibility}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+export interface DevpostCandidate extends DraftFields {
+  themes: string;
+  dates: string;
+}
+
+export async function collectDevpost(): Promise<DevpostCandidate[]> {
+  const out: DevpostCandidate[] = [];
   for (let page = 1; page <= 3 && out.length < MAX_DEVPOST_PER_RUN; page++) {
     const res = await fetch(`https://devpost.com/api/hackathons?status[]=upcoming&status[]=open&page=${page}`, {
       // Devpost's bot protection answers 403 to unknown agents from cloud IPs.
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
-      },
+      headers: { Accept: 'application/json', 'User-Agent': BROWSER_UA },
     });
     if (!res.ok) {
       logger.warn(`Devpost returned ${res.status}`);
@@ -136,6 +256,9 @@ export async function collectDevpost(): Promise<DraftFields[]> {
         prizePool: h.prize_amount ? decodeHtml(h.prize_amount) : null,
         imageUrl: h.thumbnail_url ? (h.thumbnail_url.startsWith('//') ? `https:${h.thumbnail_url}` : h.thumbnail_url) : null,
         forSchoolStudents: null,
+        country: null,
+        themes,
+        dates: h.submission_period_dates ?? '',
       });
       if (out.length >= MAX_DEVPOST_PER_RUN) break;
     }
@@ -187,7 +310,7 @@ Respond with ONLY a JSON object:
   "isEvent": boolean,
   "forSchoolStudents": boolean,   // true if school students can take part (or no age limit is stated), false if it's only for university students/adults
   "title": string,                // short event name
-  "description": string,          // 2-3 sentences in the post's language: what it is, who can join, what you get
+  "description": {"ru": string, "kz": string, "en": string}, // 1-2 plain sentences each: what it is, who can join. No hype, no em dashes
   "date": "YYYY-MM-DD" | null,    // when the event itself happens (first day)
   "registrationDeadline": "YYYY-MM-DD" | null,
   "format": "online" | "offline" | "hybrid",
@@ -238,12 +361,16 @@ export async function extractWithLlm(post: TelegramPost, apiKey: string): Promis
   const regUrl = typeof parsed.registrationUrl === 'string' && /^https?:\/\//.test(parsed.registrationUrl) ? parsed.registrationUrl : null;
   const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 200) : null);
 
+  const descriptionI18n = toI18n(parsed.description);
   return {
     source: 'telegram',
     sourceUrl: post.url,
     sourceText: post.text.slice(0, 2000),
     title: parsed.title.slice(0, 120),
-    description: (str(parsed.description) ? String(parsed.description) : post.text).slice(0, 800),
+    description: (descriptionI18n?.ru ?? (str(parsed.description) ? String(parsed.description) : post.text)).slice(0, 800),
+    descriptionI18n,
+    // The configured channels are Kazakhstani organizers.
+    country: 'KZ',
     date,
     registrationDeadline,
     format,
@@ -283,10 +410,16 @@ export const collectEvents = onSchedule(
     };
 
     // Same shape the moderator form writes (useCreateEvent / draftToInput).
-    const publish = async (draft: DraftFields) => {
+    const publish = async (draft: DraftFields, audience: string | null = null) => {
       await db.doc(`events/${keyFor(draft.sourceUrl)}`).set({
         title: draft.title,
         description: draft.description,
+        descriptionI18n: draft.descriptionI18n ?? null,
+        sourceText: draft.sourceText ?? null,
+        country: draft.country ?? null,
+        audience,
+        hidden: false,
+        screenedAt: FieldValue.serverTimestamp(),
         competitionTag: draft.title,
         date: draft.date,
         format: draft.format,
@@ -309,23 +442,73 @@ export const collectEvents = onSchedule(
 
     let queued = 0;
     let published = 0;
+    let llmCalls = 0;
+    const apiKey = GROQ_API_KEY.value();
+    const blurb = async (info: string) => {
+      if (!apiKey || llmCalls >= MAX_LLM_CALLS_PER_RUN) return null;
+      llmCalls++;
+      return summarizeEvent(info, apiKey);
+    };
+
+    // Devpost events published before the audience filter existed: run them
+    // through the same check once. Failing ones are hidden (not deleted) so
+    // a moderator can still review them; passing ones get RU/KZ/EN blurbs.
+    try {
+      const existing = await db.collection('events').where('isActive', '==', true).get();
+      for (const d of existing.docs) {
+        const ev = d.data();
+        if (ev.screenedAt || typeof ev.sourceUrl !== 'string' || !ev.sourceUrl.includes('devpost.com')) continue;
+        const page = await fetchDevpostPage(ev.sourceUrl).catch((err) => {
+          logger.warn('collectEvents: rescreen fetch failed', err);
+          return null;
+        });
+        if (!page) continue;
+        const audience = devpostAudience(page.eligibility);
+        const descriptionI18n = audience.ok
+          ? await blurb(devpostInfo({ title: ev.title, organizer: ev.organizer ?? null, tagline: page.tagline, eligibility: page.eligibility }))
+          : null;
+        await d.ref.update({
+          hidden: !audience.ok,
+          audience: audience.reason,
+          sourceText: page.tagline ?? ev.description ?? null,
+          ...(descriptionI18n ? { descriptionI18n, description: descriptionI18n.ru } : {}),
+          country: null,
+          screenedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      logger.error('collectEvents: rescreen failed', err);
+    }
 
     if (useDevpost) {
       try {
-        // Devpost drafts queued before auto-publishing existed.
+        // Devpost drafts queued before auto-publishing existed. Not published
+        // from here: anything still open comes back through the listing
+        // below and has to pass the audience check like everything else.
         const backlog = await db.collection('eventDrafts').where('source', '==', 'devpost').where('status', '==', 'pending').get();
-        for (const d of backlog.docs) {
-          const draft = d.data() as DraftFields;
-          const upcoming = (draft.date?.toMillis() ?? 0) > Date.now();
-          if (upcoming) {
-            await publish(draft);
-            published++;
-          }
-          await d.ref.update({ status: upcoming ? 'approved' : 'rejected' });
-        }
+        for (const d of backlog.docs) await d.ref.update({ status: 'rejected' });
         for (const draft of await collectDevpost()) {
           if (await isSeen(draft.sourceUrl)) continue;
-          await publish(draft);
+          const page = await fetchDevpostPage(draft.sourceUrl).catch(() => null);
+          if (!page) continue; // try again tomorrow
+          const audience = devpostAudience(page.eligibility);
+          if (!audience.ok) {
+            await markSeen(draft.sourceUrl, false);
+            continue;
+          }
+          const descriptionI18n = await blurb(
+            devpostInfo({ ...draft, themes: draft.themes, dates: draft.dates, tagline: page.tagline, eligibility: page.eligibility }),
+          );
+          await publish(
+            {
+              ...draft,
+              sourceText: page.tagline,
+              descriptionI18n,
+              description: descriptionI18n?.ru ?? draft.description,
+            },
+            audience.reason,
+          );
           published++;
         }
       } catch (err) {
@@ -333,11 +516,9 @@ export const collectEvents = onSchedule(
       }
     }
 
-    const apiKey = GROQ_API_KEY.value();
     if (!apiKey) {
       logger.warn('collectEvents: GROQ_API_KEY not set — skipping Telegram sources');
     } else {
-      let llmCalls = 0;
       for (const channel of channels) {
         if (llmCalls >= MAX_LLM_CALLS_PER_RUN) break;
         try {

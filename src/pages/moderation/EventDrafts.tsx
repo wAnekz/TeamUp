@@ -4,7 +4,7 @@ import { ArrowLeft, ExternalLink, Send, Globe, X } from 'lucide-react';
 import { Card, Badge, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { EventFormModal } from '@/components/events/EventFormModal';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useIsModerator } from '@/hooks/useReports';
 import {
   useEventSources,
@@ -37,6 +37,8 @@ function draftToInput(d: EventDraft): Partial<EventInput> {
     prizePool: d.prizePool ?? '',
     imageUrl: d.imageUrl ?? '',
     sourceUrl: d.sourceUrl,
+    country: d.country ?? (d.source === 'telegram' ? 'KZ' : null),
+    descriptionI18n: d.descriptionI18n ?? null,
   };
 }
 

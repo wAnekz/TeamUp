@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Card, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useUpdateProject } from '@/hooks/useProjects';

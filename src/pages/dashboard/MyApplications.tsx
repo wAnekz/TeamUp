@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useMyApplications } from '@/hooks/useApplications';
 import { useContacts } from '@/hooks/useProfile';
 import { ContactLinks } from '@/components/profile/ContactLinks';

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { MessageCircleWarning } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useSubmitFeedback } from '@/hooks/useFeedback';
 import { toast, errorToMessage } from '@/lib/toast';
 import { cn } from '@/utils/cn';

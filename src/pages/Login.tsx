@@ -5,8 +5,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useAuth } from '@/contexts/AuthContext';
-import { authSchema, type AuthFormValues } from '@/utils/validation';
+import { useAuth } from '@/contexts/useAuth';
+import { authSchema, PASSWORD_MIN, type AuthFormValues } from '@/utils/validation';
 import { useLang, type Lang } from '@/lib/lang';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
@@ -18,6 +18,8 @@ const T = {
     perks: ['Вступай в команды или собирай свою', 'Напоминания до конца регистрации', 'Портфолио, которое можно скачать в PDF'],
     email: 'Email',
     password: 'Пароль',
+    passwordHintSignup: (n: number) => `Минимум ${n} символов`,
+    passwordHintSignin: 'Введи пароль',
     agree: 'Я согласен(на) с',
     policyLink: 'политикой конфиденциальности',
     signIn: 'Войти',
@@ -47,6 +49,8 @@ const T = {
     perks: ['Командаларға қосыл немесе өз командаңды жина', 'Тіркеу аяқталар алдында еске салу', 'PDF-ке жүктеуге болатын портфолио'],
     email: 'Email',
     password: 'Құпиясөз',
+    passwordHintSignup: (n: number) => `Кемінде ${n} таңба`,
+    passwordHintSignin: 'Құпиясөзді енгіз',
     agree: 'Мен келісемін:',
     policyLink: 'құпиялылық саясаты',
     signIn: 'Кіру',
@@ -76,6 +80,8 @@ const T = {
     perks: ['Join teams or start your own', 'Reminders before registration closes', 'A portfolio you can export as PDF'],
     email: 'Email',
     password: 'Password',
+    passwordHintSignup: (n: number) => `At least ${n} characters`,
+    passwordHintSignin: 'Enter your password',
     agree: 'I agree to the',
     policyLink: 'privacy policy',
     signIn: 'Sign in',
@@ -164,7 +170,7 @@ export default function Login() {
     <main className="flex min-h-dvh flex-col items-center justify-center bg-surface-50 px-4 py-8">
       <Link
         to="/"
-        className="mb-4 inline-flex w-full max-w-sm items-center gap-1 text-sm text-surface-500 hover:text-surface-700"
+        className="mb-2 inline-flex min-h-11 w-full max-w-sm items-center gap-1 text-sm text-surface-500 hover:text-surface-700"
       >
         <ArrowLeft size={14} /> {t.browse}
       </Link>
@@ -199,7 +205,9 @@ export default function Login() {
           <Input
             label={t.password}
             type="password"
-            placeholder="••••••••"
+            // Dots looked like a password was already filled in.
+            placeholder={mode === 'signup' ? t.passwordHintSignup(PASSWORD_MIN) : t.passwordHintSignin}
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             {...register('password')}
             error={errors.password ? t.shortPassword : undefined}
           />
@@ -238,7 +246,8 @@ export default function Login() {
           {mode === 'signin' ? t.noAccount : t.haveAccount}
           <button
             type="button"
-            className="font-medium text-accent-600 hover:underline"
+            // 44px tall tap area on phones; inline so the sentence still reads as one line.
+            className="inline-flex min-h-11 items-center px-1 font-medium text-accent-600 hover:underline"
             onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
           >
             {mode === 'signin' ? t.signUp : t.signIn}

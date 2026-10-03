@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useT } from '@/i18n';
 
 /**

@@ -14,6 +14,7 @@ import type { EventItem } from '@/types';
 import { EventImage } from '@/components/events/EventImage';
 import { cn } from '@/utils/cn';
 import { formatLongDate } from '@/utils/dates';
+import { kazakhstanFirst, visibleEvents } from '@/utils/events';
 // Headline font, only needed here (this page is its own lazy chunk).
 import '@fontsource-variable/geologica/wght.css';
 
@@ -203,7 +204,7 @@ export default function Home() {
   const { data: projects, isLoading: loadingProjects } = useRecommendationPool(true);
   const { data: stats } = useSchoolStats();
 
-  const upcoming = (events ?? []).filter((e) => (e.date?.toMillis() ?? 0) > Date.now()).slice(0, 3);
+  const upcoming = kazakhstanFirst(visibleEvents(events ?? []).filter((e) => (e.date?.toMillis() ?? 0) > Date.now())).slice(0, 3);
   const fresh = (projects ?? []).slice(0, 3);
   const topSchools = stats?.season === currentSeason() ? stats.schools.filter((s) => s.score > 0).slice(0, 3) : [];
 
@@ -232,7 +233,7 @@ export default function Home() {
           </p>
           <div style={riseDelay(3)} className={cn('mt-8 flex flex-col gap-3 sm:flex-row', RISE)}>
             <Link to="/login?mode=signup" className="group">
-              <Button size="lg" className="w-full transition-transform group-active:scale-[0.98] sm:w-auto">
+              <Button size="lg" className="w-full whitespace-nowrap transition-transform group-active:scale-[0.98] max-[359px]:px-4 max-[359px]:text-[15px] sm:w-auto">
                 {t.ctaSignup} <ArrowRight size={18} aria-hidden className="transition-transform group-hover:translate-x-0.5" />
               </Button>
             </Link>
@@ -247,7 +248,7 @@ export default function Home() {
         <div role="region" aria-labelledby="events-title" className="min-w-0">
           <SectionHeader id="events-title" title={t.events} to="/events" linkText={t.allEvents} />
           {loadingEvents && (
-            <div className="-mx-4 flex gap-3 overflow-hidden px-4 lg:mx-0 lg:flex-col lg:px-0">
+            <div className="flex gap-3 overflow-hidden lg:flex-col">
               {[0, 1, 2].map((i) => (
                 <Skeleton key={i} className="h-56 w-[78%] shrink-0 rounded-2xl lg:h-28 lg:w-full" />
               ))}
@@ -257,7 +258,9 @@ export default function Home() {
             <p className="rounded-2xl border border-dashed border-surface-300 p-5 text-sm text-surface-600">{t.noEvents}</p>
           )}
           {upcoming.length > 0 && (
-            <ul className="scrollbar-none -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 lg:mx-0 lg:snap-none lg:flex-col lg:overflow-visible lg:px-0">
+            // Stays inside the page padding: bleeding to the screen edge read as
+            // the page overflowing on narrow phones. The next card still peeks.
+            <ul className="scrollbar-none flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 lg:snap-none lg:flex-col lg:overflow-visible">
               {upcoming.map((ev, i) => (
                 <li
                   key={ev.id}
@@ -445,11 +448,11 @@ function SectionHeader({
   large?: boolean;
 }) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-3">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
       <h2
         id={id}
         className={cn(
-          'font-display font-bold tracking-tight text-surface-900',
+          'min-w-0 font-display font-bold tracking-tight text-surface-900',
           large ? 'text-3xl sm:text-4xl' : 'text-xl',
         )}
       >

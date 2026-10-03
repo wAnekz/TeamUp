@@ -24,7 +24,8 @@ export function ProjectFilterPanel({
         />
       </label>
 
-      <div className="flex gap-2">
+      {/* Wraps: "Только со свободными местами" alone is wider than a 320px phone row. */}
+      <div className="flex flex-wrap gap-2">
         {(['event', 'ongoing'] as ProjectType[]).map((type) => (
           <button
             key={type}

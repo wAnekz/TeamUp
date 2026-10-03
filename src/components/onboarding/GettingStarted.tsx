@@ -5,7 +5,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { Card } from '@/components/ui/primitives';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useMyEventSubscriptions } from '@/hooks/useEvents';
 import { useAuthorProjects, useMemberProjects } from '@/hooks/useProjects';
 import { useAchievements } from '@/hooks/useAchievements';

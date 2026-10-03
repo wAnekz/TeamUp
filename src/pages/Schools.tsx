@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { School, Trophy } from 'lucide-react';
 import { Card, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { mySchoolKey, useSchoolStats } from '@/hooks/useSchoolStats';
 import { useSeasonChampions } from '@/hooks/useGamification';
 import { currentSeason, daysLeftInSeason, formatSeason } from '@/constants/gamification';
@@ -23,6 +23,12 @@ export default function Schools() {
   // season's — don't present it as this season's standings.
   const schools = stats?.season === season ? stats.schools : [];
   const myIndex = myKey ? schools.findIndex((s) => s.key === myKey) : -1;
+  const hasSchool = !!(profile?.schoolId || profile?.school);
+  // Nothing ranked yet (new season, or nobody with a school has finished a
+  // profile before the nightly run). One clear empty state replaces the
+  // sign-up/add-school prompts and the "updated" stamp, which read as a
+  // contradiction next to an empty table.
+  const empty = !isLoading && schools.length === 0;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -34,7 +40,7 @@ export default function Schools() {
         <p className="mt-1 text-sm text-surface-500">{t.subtitle}</p>
       </div>
 
-      {!profile ? (
+      {empty ? null : !profile ? (
         <Card className="flex items-center justify-between gap-3 border-accent-200 bg-accent-50">
           <p className="text-sm text-accent-800">{t.guestPrompt}</p>
           <Link to="/login?mode=signup">
@@ -64,10 +70,14 @@ export default function Schools() {
 
       {isLoading && <Skeleton className="h-64" />}
 
-      {!isLoading && schools.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-surface-300 py-12 text-center text-sm text-surface-500">
-          {t.empty}
-        </p>
+      {empty && (
+        <div className="rounded-2xl border border-dashed border-surface-300 px-5 py-10 text-center">
+          <Trophy size={28} aria-hidden className="mx-auto text-accent-600" />
+          <p className="mx-auto mt-3 max-w-sm text-sm text-surface-700">{profile && hasSchool ? t.emptyHasSchool : t.empty}</p>
+          <Link to={profile ? '/dashboard?tab=profile' : '/login?mode=signup'} className="mt-4 inline-block">
+            <Button size="sm">{!profile ? t.signUp : hasSchool ? t.openProfile : t.addSchool}</Button>
+          </Link>
+        </div>
       )}
 
       {schools.length > 0 && (
@@ -102,7 +112,7 @@ export default function Schools() {
         </Card>
       )}
 
-      {stats?.updatedAt && stats.season === season && (
+      {stats?.updatedAt && schools.length > 0 && (
         <p className="text-center text-xs text-surface-400">{timeAgo(stats.updatedAt)}</p>
       )}
 

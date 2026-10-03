@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Pencil } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Card, Badge, Skeleton, ErrorState } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
 import { useDeleteProject, useUpdateProject } from '@/hooks/useProjects';

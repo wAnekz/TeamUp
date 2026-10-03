@@ -5,7 +5,7 @@ import { serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db } from '@/lib/firebase';
 import { functions } from '@/lib/firebaseFunctions';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Input, Textarea } from '@/components/ui/Input';
 import { SchoolPicker } from '@/components/profile/SchoolPicker';
 import { saveContacts } from '@/hooks/useProfile';

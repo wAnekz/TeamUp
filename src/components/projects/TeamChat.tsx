@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Timestamp } from 'firebase/firestore';
 import { Send, UserX, UserCheck } from 'lucide-react';
 import { Avatar, Skeleton } from '@/components/ui/primitives';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useProjectChat, sendProjectMessage } from '@/hooks/useChat';
 import { blockUser, unblockUser, useBlockedUserIds } from '@/hooks/useBlockedUsers';
 import { cn } from '@/utils/cn';

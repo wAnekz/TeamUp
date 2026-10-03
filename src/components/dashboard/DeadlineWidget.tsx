@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { AlarmClock, CalendarClock, School } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useUpcomingDeadlines } from '@/hooks/useProjects';
 import { useEventsList } from '@/hooks/useEvents';
+import { visibleEvents } from '@/utils/events';
 import { mySchoolKey, useSchoolStats } from '@/hooks/useSchoolStats';
 import { currentSeason } from '@/constants/gamification';
 import { useT } from '@/i18n';
@@ -25,7 +26,7 @@ export function DeadlineWidget() {
   const t = tAll.dashboard;
 
   const urgent = (deadlines ?? []).filter((d) => d.daysLeft <= URGENT_DAYS);
-  const soonEvents = (events ?? []).filter((e) => {
+  const soonEvents = visibleEvents(events ?? []).filter((e) => {
     const days = (e.date.toMillis() - Date.now()) / (1000 * 60 * 60 * 24);
     return days >= 0 && days <= SOON_EVENTS_DAYS;
   });

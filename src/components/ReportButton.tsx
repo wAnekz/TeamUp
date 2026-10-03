@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Flag } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useCreateReport } from '@/hooks/useReports';
 import { useT } from '@/i18n';
 import type { ReportTargetType } from '@/types';

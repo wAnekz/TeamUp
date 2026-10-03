@@ -360,9 +360,25 @@ export interface EventItem {
   interestedCount?: number;
   // Where an auto-collected event came from (see functions/src/eventCollector.ts).
   sourceUrl?: string | null;
+  // Original text from the source (Devpost tagline / Telegram post), kept
+  // next to the short RU/KZ/EN blurbs written for students.
+  sourceText?: string | null;
+  descriptionI18n?: DescriptionI18n | null;
+  // 'KZ' for events in or for Kazakhstan; null for worldwide online ones.
+  country?: string | null;
+  // Failed the audience check (adults-only etc.) or hidden by a moderator:
+  // left out of every list except for moderators.
+  hidden?: boolean;
+  audience?: string | null; // why it passed/failed the check, e.g. "ages 13+"
   isActive: boolean; // moderators can hide a past event without deleting it
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface DescriptionI18n {
+  ru: string;
+  kz: string;
+  en: string;
 }
 
 export interface EventResource {
@@ -403,6 +419,8 @@ export interface EventDraft {
   prizePool?: string | null;
   imageUrl?: string | null;
   forSchoolStudents?: boolean | null;
+  descriptionI18n?: DescriptionI18n | null;
+  country?: string | null;
   status: EventDraftStatus;
   createdAt: Timestamp;
 }

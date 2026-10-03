@@ -9,7 +9,7 @@ import { ContactLinks } from '@/components/profile/ContactLinks';
 import { TeamsSection } from '@/components/profile/TeamsSection';
 import { AchievementsSection } from '@/components/profile/AchievementsSection';
 import { BadgesCard, LevelPill } from '@/components/gamification/Gamification';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useContacts } from '@/hooks/useProfile';
 import { interestLabel, skillLabel, useT } from '@/i18n';
 

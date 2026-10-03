@@ -11,7 +11,8 @@
     "seed": "tsx src/seed/run.ts",
     "test": "vitest run",
     "test:rules": "npx -y firebase-tools@latest emulators:exec --only firestore,storage --project demo-teamup \"npx vitest run --config vitest.rules.config.ts\"",
-    "test:e2e": "npm --prefix functions run build && npx -y firebase-tools@latest emulators:exec --only auth,firestore,functions,storage --project demo-teamup \"bash tests/e2e/run.sh\""
+    "test:e2e": "npm --prefix functions run build && npx -y firebase-tools@latest emulators:exec --only auth,firestore,functions,storage --project demo-teamup \"bash tests/e2e/run.sh\"",
+    "seed:kz": "tsx scripts/seed-kz-events.ts"
   },
   "dependencies": {
     "@fontsource-variable/geologica": "^5.3.0",

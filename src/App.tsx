@@ -2,7 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { AllowGuest, RequireAuth, RequireGuest } from '@/components/layout/guards';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import NotFound from '@/pages/NotFound';
 
 // Everything below is only needed once a specific route is visited, so it's

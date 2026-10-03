@@ -75,8 +75,11 @@ export const lookingForTeamSchema = z.object({
 });
 export type LookingForTeamFormValues = z.infer<typeof lookingForTeamSchema>;
 
+/** Firebase Auth's own minimum; the sign-up hint quotes this number. */
+export const PASSWORD_MIN = 6;
+
 export const authSchema = z.object({
   email: z.string().email('email'),
-  password: z.string().min(6, 'password'),
+  password: z.string().min(PASSWORD_MIN, 'password'),
 });
 export type AuthFormValues = z.infer<typeof authSchema>;

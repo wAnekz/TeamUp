@@ -4,7 +4,7 @@ import { doc, getDoc, type Timestamp } from 'firebase/firestore';
 import { ArrowLeft } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { Card, Skeleton } from '@/components/ui/primitives';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useIsModerator } from '@/hooks/useReports';
 import { formatDeadline } from '@/utils/dates';
 import { useT } from '@/i18n';

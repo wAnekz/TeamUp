@@ -25,6 +25,9 @@ function emptyInput(): EventInput {
     imageUrl: '',
     resources: [],
     sourceUrl: null,
+    country: null,
+    hidden: false,
+    descriptionI18n: null,
   };
 }
 
@@ -70,7 +73,13 @@ export function EventFormModal({
     }
     // The tag is how "Find a team" links people up — default it to the
     // title so a moderator approving a draft doesn't have to think about it.
-    const input = { ...form, competitionTag: form.competitionTag.trim() || form.title.trim() };
+    // An edited description drops the RU/KZ/EN blurbs, which would otherwise
+    // keep showing the old text.
+    const input = {
+      ...form,
+      competitionTag: form.competitionTag.trim() || form.title.trim(),
+      descriptionI18n: form.description === initial?.description ? form.descriptionI18n : null,
+    };
     try {
       if (eventId) {
         await updateMutation.mutateAsync({ id: eventId, input });
@@ -123,6 +132,18 @@ export function EventFormModal({
             </select>
           </label>
         </div>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.country}</span>
+          <select
+            value={form.country ?? ''}
+            onChange={(e) => set('country', e.target.value || null)}
+            className="w-full rounded-xl border border-surface-400 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
+          >
+            <option value="KZ">{t.countryKz}</option>
+            <option value="">{t.countryOther}</option>
+          </select>
+        </label>
 
         {form.format !== 'online' && (
           <Input
@@ -216,6 +237,19 @@ export function EventFormModal({
             ))}
           </div>
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-surface-700">
+          <input
+            type="checkbox"
+            checked={!!form.hidden}
+            onChange={(e) => set('hidden', e.target.checked)}
+            className="mt-0.5 rounded border-surface-300 text-accent-600"
+          />
+          <span>
+            {t.hidden}
+            <span className="block text-xs text-surface-500">{t.hiddenHint}</span>
+          </span>
+        </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

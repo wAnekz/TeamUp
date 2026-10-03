@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navbar } from './Navbar';
 import { EmailVerificationBanner } from './EmailVerificationBanner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { useXpToasts } from '@/hooks/useGamification';
 import { useOnline } from '@/hooks/useOnline';
 import { useT } from '@/i18n';

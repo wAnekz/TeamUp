@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -13,28 +13,7 @@ import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firest
 import { auth, googleProvider, db } from '@/lib/firebase';
 import { forgetPushTokenOnSignOut } from '@/lib/messaging';
 import type { UserProfile } from '@/types';
-
-interface AuthContextValue {
-  user: User | null;
-  profile: UserProfile | null;
-  loading: boolean;
-  // Snapshot of user.emailVerified, kept in its own bit of state because the
-  // Firebase User object doesn't itself trigger a re-render when the
-  // underlying value changes (e.g. after the user clicks the link in the
-  // verification email in another tab, then comes back and hits "I've
-  // verified"). Google sign-in accounts are always true here — Google
-  // already verified the address.
-  emailVerified: boolean;
-  signInEmail: (email: string, password: string) => Promise<void>;
-  signUpEmail: (email: string, password: string) => Promise<void>;
-  signInGoogle: () => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-  resendVerificationEmail: () => Promise<void>;
-  refreshEmailVerified: () => Promise<boolean>;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import { AuthContext } from './useAuth';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -199,10 +178,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
 }

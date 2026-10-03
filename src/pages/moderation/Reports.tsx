@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { BarChart3, Inbox } from 'lucide-react';
 import { Card, Badge, Skeleton } from '@/components/ui/primitives';
 import { Button } from '@/components/ui/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import {
   useDeleteReportedProject,
   useIsModerator,

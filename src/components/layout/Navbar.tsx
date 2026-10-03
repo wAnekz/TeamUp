@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { Compass, Users, LayoutGrid, PlusCircle, User, ShieldAlert, Calendar, Trophy, LogIn } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Avatar } from '@/components/ui/primitives';
 import { useIsModerator } from '@/hooks/useReports';
 import { cn } from '@/utils/cn';
@@ -128,8 +128,10 @@ function GuestNavbar() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-surface-200 bg-white/95 backdrop-saturate-150 print:!hidden">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6">
-          <Link to="/" className="text-lg font-bold tracking-tight text-surface-900">
+        {/* Below 360px (iPhone SE, small Androids) "Регистрация" didn't fit and
+            pushed the page sideways; tighter spacing keeps both buttons. */}
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 max-[359px]:gap-1.5 max-[359px]:px-3 sm:h-16 sm:px-6">
+          <Link to="/" className="shrink-0 text-lg font-bold tracking-tight text-surface-900">
             Team<span className="text-accent-600">Up</span>
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
@@ -140,19 +142,19 @@ function GuestNavbar() {
               </NavLink>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 max-[359px]:gap-1">
             <LanguageSwitcher compact className="hidden md:flex" />
             <ThemeToggle />
             <Link
               to="/login"
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium text-surface-700 hover:bg-surface-100"
+              className="inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-sm font-medium text-surface-700 hover:bg-surface-100 max-[359px]:px-2 sm:h-9"
             >
               <LogIn size={15} className="hidden sm:block" />
               {t.login}
             </Link>
             <Link
               to="/login?mode=signup"
-              className="inline-flex h-9 items-center rounded-xl bg-accent-600 px-3.5 text-sm font-medium text-white shadow-soft hover:bg-accent-700"
+              className="inline-flex h-11 items-center whitespace-nowrap rounded-xl bg-accent-600 px-3.5 text-sm font-medium text-white shadow-soft hover:bg-accent-700 max-[359px]:px-2.5 sm:h-9"
             >
               {t.signup}
             </Link>

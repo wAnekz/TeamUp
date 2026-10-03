@@ -10,7 +10,7 @@ import { Card, Skeleton } from '@/components/ui/primitives';
 import { SKILL_CATEGORIES, INTEREST_CATEGORIES } from '@/constants/options';
 import { projectSchema, type ProjectFormValues } from '@/utils/validation';
 import { useCreateProject, useProject, useUpdateProject } from '@/hooks/useProjects';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Timestamp, deleteField } from 'firebase/firestore';
 import type { Skill, Interest, ProjectRole } from '@/types';
 import { nanoid } from '@/utils/id';
