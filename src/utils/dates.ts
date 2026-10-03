@@ -22,6 +22,12 @@ export function formatDeadline(ts: Timestamp | null | undefined): string {
   return format(ts.toDate(), 'd MMM yyyy', { locale: dateLocale() });
 }
 
+/** "6 октября 2026" / "6 қазан 2026". date-fns, not toLocaleDateString:
+ *  Chrome has no Kazakh month names and printed "2026 M10 6". */
+export function formatLongDate(ts: Timestamp | null | undefined): string {
+  return ts ? format(ts.toDate(), 'd MMMM yyyy', { locale: dateLocale() }) : '';
+}
+
 export function isDeadlinePassed(ts: Timestamp | null | undefined): boolean {
   if (!ts) return false;
   return ts.toDate().getTime() < Date.now();

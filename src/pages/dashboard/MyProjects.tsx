@@ -36,6 +36,20 @@ export default function MyProjects() {
     },
   });
 
+  // One action at a time, so a double tap can't fire two writes (or a
+  // second delete of an already-deleted project). Errors are toasted by the
+  // MutationCache in lib/queryClient.ts; the catch only stops an unhandled
+  // rejection.
+  const busy = updateMutation.isPending || deleteMutation.isPending;
+  const run = (action: () => Promise<unknown>) => async () => {
+    try {
+      await action();
+      refetch();
+    } catch {
+      // already shown as a toast
+    }
+  };
+
   if (isLoading) return <Skeleton className="h-40" />;
 
   if (isError) {
@@ -73,10 +87,8 @@ export default function MyProjects() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={async () => {
-                    await updateMutation.mutateAsync({ id: project.id, patch: { status: 'closed' } });
-                    refetch();
-                  }}
+                  disabled={busy}
+                  onClick={run(() => updateMutation.mutateAsync({ id: project.id, patch: { status: 'closed' } }))}
                 >
                   {t.closeRecruitment}
                 </Button>
@@ -85,10 +97,8 @@ export default function MyProjects() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={async () => {
-                    await updateMutation.mutateAsync({ id: project.id, patch: { status: 'open' } });
-                    refetch();
-                  }}
+                  disabled={busy}
+                  onClick={run(() => updateMutation.mutateAsync({ id: project.id, patch: { status: 'open' } }))}
                 >
                   {t.reopen}
                 </Button>
@@ -97,10 +107,8 @@ export default function MyProjects() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={async () => {
-                    await updateMutation.mutateAsync({ id: project.id, patch: { status: 'archived' } });
-                    refetch();
-                  }}
+                  disabled={busy}
+                  onClick={run(() => updateMutation.mutateAsync({ id: project.id, patch: { status: 'archived' } }))}
                 >
                   {t.archive}
                 </Button>
@@ -108,10 +116,8 @@ export default function MyProjects() {
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={async () => {
-                    await updateMutation.mutateAsync({ id: project.id, patch: { status: 'open' } });
-                    refetch();
-                  }}
+                  disabled={busy}
+                  onClick={run(() => updateMutation.mutateAsync({ id: project.id, patch: { status: 'open' } }))}
                 >
                   {t.unarchive}
                 </Button>
@@ -119,11 +125,9 @@ export default function MyProjects() {
               <Button
                 size="sm"
                 variant="danger"
-                onClick={async () => {
-                  if (confirm(t.confirmDelete)) {
-                    await deleteMutation.mutateAsync(project.id);
-                    refetch();
-                  }
+                disabled={busy}
+                onClick={() => {
+                  if (confirm(t.confirmDelete)) void run(() => deleteMutation.mutateAsync(project.id))();
                 }}
               >
                 {tAll.common.delete}

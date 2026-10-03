@@ -10,6 +10,7 @@ import { ToastViewport } from '@/components/ui/ToastViewport';
 import { onForegroundPush } from '@/lib/messaging';
 import { toast } from '@/lib/toast';
 import App from './App';
+import { ensureLangLoaded } from '@/i18n';
 import './index.css';
 import '@fontsource-variable/inter';
 import '@/lib/theme';
@@ -64,7 +65,10 @@ window.addEventListener('vite:preloadError', (event) => {
   reloadOnce();
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Kazakh/English strings are a separate chunk: fetch the remembered one
+// first (Russian is bundled). If that fails (offline, not cached), Russian
+// fallback is better than no page.
+ensureLangLoaded().catch(() => {}).finally(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
@@ -77,4 +81,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>,
-);
+));

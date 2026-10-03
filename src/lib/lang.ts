@@ -29,7 +29,14 @@ function read(): Lang {
 let current: Lang = read();
 if (typeof document !== 'undefined') document.documentElement.lang = current === 'kz' ? 'kk' : current;
 
-export function setLang(lang: Lang) {
+// Set by src/i18n: fetches a language's strings before we switch to it, so
+// the UI never renders a half-loaded language.
+let loadLang: ((lang: Lang) => Promise<void>) | null = null;
+export function registerLangLoader(loader: (lang: Lang) => Promise<void>) {
+  loadLang = loader;
+}
+
+function applyLang(lang: Lang) {
   current = lang;
   try {
     localStorage.setItem(KEY, lang);
@@ -38,6 +45,15 @@ export function setLang(lang: Lang) {
   }
   document.documentElement.lang = lang === 'kz' ? 'kk' : lang;
   listeners.forEach((l) => l());
+}
+
+export function setLang(lang: Lang) {
+  if (!loadLang) return applyLang(lang);
+  // Offline with the chunk not cached yet: stay on the current language.
+  loadLang(lang).then(
+    () => applyLang(lang),
+    () => {},
+  );
 }
 
 /** Current language outside React (toasts from hooks, date helpers). */

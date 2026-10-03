@@ -10,10 +10,10 @@ import { useSchoolStats } from '@/hooks/useSchoolStats';
 import { currentSeason, formatSeason } from '@/constants/gamification';
 import { useLang, type Lang } from '@/lib/lang';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
-import type { Timestamp } from 'firebase/firestore';
 import type { EventItem } from '@/types';
 import { EventImage } from '@/components/events/EventImage';
 import { cn } from '@/utils/cn';
+import { formatLongDate } from '@/utils/dates';
 // Headline font, only needed here (this page is its own lazy chunk).
 import '@fontsource-variable/geologica/wght.css';
 
@@ -182,12 +182,6 @@ const T = {
   },
 } satisfies Record<Lang, unknown>;
 
-const LOCALE: Record<Lang, string> = { ru: 'ru-RU', kz: 'kk-KZ', en: 'en-US' };
-
-function formatDate(ts: Timestamp | undefined, lang: Lang) {
-  return ts ? ts.toDate().toLocaleDateString(LOCALE[lang], { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-}
-
 // Hero load-in: one short staggered rise so the eye reads tag, headline,
 // text, buttons in order. motion-safe only, so reduced-motion users get the
 // page instantly (the delay would otherwise still hide content).
@@ -275,7 +269,7 @@ export default function Home() {
                     i === 2 && 'lg:ml-4',
                   )}
                 >
-                  <EventTile ev={ev} lang={lang} online={t.online} interested={t.interested} />
+                  <EventTile ev={ev} online={t.online} interested={t.interested} />
                 </li>
               ))}
             </ul>
@@ -410,12 +404,10 @@ export default function Home() {
 
 function EventTile({
   ev,
-  lang,
   online,
   interested,
 }: {
   ev: EventItem;
-  lang: Lang;
   online: string;
   interested: (n: number) => string;
 }) {
@@ -428,7 +420,7 @@ function EventTile({
       <div className="min-w-0 px-1 pb-1 lg:p-0">
         <p className="line-clamp-2 font-semibold text-surface-900">{ev.title}</p>
         <p className="mt-1 flex items-center gap-1 text-xs text-surface-600">
-          <Calendar size={12} aria-hidden className="shrink-0" /> {formatDate(ev.date, lang)}
+          <Calendar size={12} aria-hidden className="shrink-0" /> {formatLongDate(ev.date)}
           {ev.format === 'online' ? ` · ${online}` : ev.location ? ` · ${ev.location}` : ''}
         </p>
         {(ev.interestedCount ?? 0) > 0 && (
