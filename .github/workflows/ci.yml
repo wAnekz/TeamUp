@@ -10,6 +10,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   app:
     name: Types, lint, unit tests, build
@@ -79,3 +82,58 @@ jobs:
       - run: npm run test:e2e
         env:
           CHROME_PATH: /usr/bin/google-chrome
+
+  # Publishes main to Netlify only after every check above is green, built
+  # from the commit itself rather than someone's working copy. Rules and
+  # functions are still deployed by hand first (README "Deploy").
+  deploy:
+    name: Deploy to Netlify
+    needs: [app, functions, rules, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: 22096e48-1663-46f8-b37d-4c7396b08937
+      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+      VITE_TELEGRAM_BOT_USERNAME: ${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
+    steps:
+      # A build with a missing VITE_* value would ship a site that can't talk
+      # to Firebase, so any missing secret skips the deploy (with a warning)
+      # instead of publishing something broken.
+      - name: Check deploy secrets
+        id: gate
+        run: |
+          missing=""
+          for v in NETLIFY_AUTH_TOKEN VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID \
+                   VITE_FIREBASE_STORAGE_BUCKET VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID \
+                   VITE_FIREBASE_VAPID_KEY VITE_TELEGRAM_BOT_USERNAME; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::warning::Deploy skipped, missing secrets:$missing"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: steps.gate.outputs.ready == 'true'
+      - run: npm run build
+        if: steps.gate.outputs.ready == 'true'
+      - name: Publish
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          npx -y netlify-cli@27.10.2 deploy --prod --dir=dist --message "ci ${GITHUB_SHA::7}"
