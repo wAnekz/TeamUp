@@ -39,12 +39,29 @@ registerSW({
 
 // Only when a previous SW was in charge: on a first visit the new SW claiming
 // the page is not an update, and reloading would load the site twice.
+// The reload waits until the tab is hidden (switched away, app backgrounded)
+// so a deploy never wipes an application or post someone is typing.
 const hadController = !!navigator.serviceWorker?.controller;
 let hasReloaded = false;
-navigator.serviceWorker?.addEventListener('controllerchange', () => {
-  if (!hadController || hasReloaded) return;
+const reloadOnce = () => {
+  if (hasReloaded) return;
   hasReloaded = true;
   window.location.reload();
+};
+navigator.serviceWorker?.addEventListener('controllerchange', () => {
+  if (!hadController || hasReloaded) return;
+  if (document.visibilityState === 'hidden') return reloadOnce();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') reloadOnce();
+  });
+});
+
+// A tab still running an older deploy can ask for a page chunk that the new
+// deploy no longer has (chunks are no longer all precached). Vite reports
+// that here; a reload picks up the current build instead of a blank page.
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  reloadOnce();
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

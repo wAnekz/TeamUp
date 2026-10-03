@@ -7,6 +7,8 @@ import { ruPlural } from '@/i18n/plural';
 import { levelFor, LEVELS as SERVER_LEVELS, seasonId, XP } from '../../functions/src/gamification';
 import { pickNudge } from '../../functions/src/reengagement';
 import { devpostEndDate } from '../../functions/src/eventCollector';
+import { profileProblem } from '../../functions/src/profile';
+import { profileSchema } from '@/utils/validation';
 import { LEVELS } from '@/constants/gamification';
 import type { LookingForTeamPost, Project, ProjectRole, UserProfile } from '@/types';
 
@@ -167,5 +169,21 @@ describe('Devpost date parsing', () => {
     expect(devpostEndDate('Jul 31 - Oct 01, 2026')?.toDate().toISOString().slice(0, 10)).toBe('2026-10-01');
     expect(devpostEndDate('Sep 10 - 12, 2026')?.toDate().toISOString().slice(0, 10)).toBe('2026-09-12');
     expect(devpostEndDate(undefined)).toBeNull();
+  });
+});
+
+describe('age limit (service is for 14-18)', () => {
+  const user = { name: 'Aida', age: 14, grade: 9, city: 'Almaty', skills: ['Python'], interests: ['AI'] };
+  const contacts = { telegram: '@aida' };
+
+  it('the server rejects 13-year-olds and accepts 14', () => {
+    expect(profileProblem({ ...user, age: 13 }, contacts)).toBe('age');
+    expect(profileProblem(user, contacts)).toBeNull();
+  });
+
+  it('the profile form rejects 13 with the 14+ message', () => {
+    const res = profileSchema.safeParse({ ...user, age: 13 });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues.find((i) => i.path[0] === 'age')?.message).toBe('age14');
   });
 });

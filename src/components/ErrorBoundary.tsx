@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode, lazy, Suspense } from 'react';
 import { getT } from '@/i18n';
 
-// Lazy so framer-motion and the form libraries stay out of the first bundle.
+// Lazy so the modal and the form libraries stay out of the first bundle.
 const FeedbackButton = lazy(() => import('@/components/FeedbackButton').then((m) => ({ default: m.FeedbackButton })));
 
 interface Props {

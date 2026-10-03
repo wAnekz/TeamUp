@@ -2,6 +2,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions/v2';
+import { CALLABLE_REGIONS } from './region';
 
 /**
  * XP, levels, badges, seasons. No currency on purpose — nothing here can be
@@ -289,7 +290,7 @@ export const xpOnEventInterest = onDocumentCreated('eventSubscriptions/{subId}',
  * before gamification existed (accepted applications, full teams,
  * achievements with files). Safe to run more than once.
  */
-export const backfillXp = onCall({ timeoutSeconds: 540 }, async (req) => {
+export const backfillXp = onCall({ region: CALLABLE_REGIONS, timeoutSeconds: 540 }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in first.');
   const db = getFirestore();

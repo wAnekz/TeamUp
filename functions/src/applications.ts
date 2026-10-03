@@ -1,6 +1,7 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { requireCompleteProfile } from './invites';
+import { CALLABLE_REGIONS } from './region';
 
 /**
  * Accepting an application adds the applicant to the team, which also opens
@@ -17,7 +18,7 @@ interface ProjectRole {
   slotsFilled: number;
 }
 
-export const acceptApplication = onCall<{ applicationId?: string }>(async (req) => {
+export const acceptApplication = onCall<{ applicationId?: string }>({ region: CALLABLE_REGIONS }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Сначала войди в аккаунт.');
   const applicationId = req.data?.applicationId;

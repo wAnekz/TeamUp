@@ -279,6 +279,7 @@ export default function CreateProject() {
           {!isEditing && (
             <Button
               type="button"
+              needsNetwork
               variant="secondary"
               className="flex-1"
               loading={isSubmitting}
@@ -289,6 +290,7 @@ export default function CreateProject() {
           )}
           <Button
             type="button"
+            needsNetwork
             className="flex-1"
             loading={isSubmitting}
             onClick={handleSubmit((v) => submit(v, false), scrollToFirstError)}

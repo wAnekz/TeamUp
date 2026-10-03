@@ -18,6 +18,7 @@ export const en = {
     back: 'Back',
     send: 'Send',
     close: 'Close',
+    offline: "You're offline. Sending will work again once you're back online.",
     retry: 'Retry',
     publish: 'Publish',
     loading: 'Loading...',
@@ -90,7 +91,7 @@ export const en = {
   validation: {
     linkHttps: 'Link should start with https://',
     nameShort: 'Name is too short',
-    age13: 'Must be 13+',
+    age14: 'Must be 14+',
     ageMax: 'This platform is for high schoolers',
     cityRequired: 'City is required',
     max200: 'Max 200 characters',

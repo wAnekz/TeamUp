@@ -6,6 +6,9 @@
 // navigate away and would drop router state on the floor.
 const KEY = 'teamup:returnTo';
 
+// Same-origin app paths only: browsers read "//host" and "/\host" as another site.
+const isAppPath = (p: string) => p.startsWith('/') && !p.startsWith('//') && !p.includes('\\');
+
 /**
  * `keepExisting`: used on the onboarding detour, where the path is just the
  * generic post-login landing (/feed) — it must not clobber the page the
@@ -14,7 +17,7 @@ const KEY = 'teamup:returnTo';
 export function rememberReturnTo(path: string, { keepExisting = false } = {}) {
   try {
     if (keepExisting && localStorage.getItem(KEY)) return;
-    if (path.startsWith('/') && !path.startsWith('/login')) localStorage.setItem(KEY, path);
+    if (isAppPath(path) && !path.startsWith('/login')) localStorage.setItem(KEY, path);
   } catch {
     // storage blocked (private mode) — they just land on the feed
   }
@@ -24,7 +27,8 @@ export function takeReturnTo(): string | null {
   try {
     const path = localStorage.getItem(KEY);
     if (path) localStorage.removeItem(KEY);
-    return path;
+    // Re-checked on the way out too: storage is writable by any script on the page.
+    return path && isAppPath(path) ? path : null;
   } catch {
     return null;
   }

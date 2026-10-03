@@ -1,0 +1,18 @@
+# Security + version updates for every ecosystem in the repo.
+# Firebase SDK packages move together, so they are grouped into one PR.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      firebase: { patterns: ["firebase", "@firebase/*"] }
+      vitest: { patterns: ["vitest", "@vitest/*"] }
+  - package-ecosystem: npm
+    directory: /functions
+    schedule: { interval: weekly }
+    groups:
+      firebase: { patterns: ["firebase-admin", "firebase-functions"] }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

@@ -4,6 +4,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions/v2';
 import { emailShell, escapeHtml, GMAIL_APP_PASSWORD, sendEmail, sendPush, APP_URL } from './notifications';
 import { sendTelegram, TELEGRAM_BOT_TOKEN } from './telegram';
+import { CALLABLE_REGIONS } from './region';
 
 /**
  * Team invites. Both are callables rather than client writes because they
@@ -41,7 +42,7 @@ export async function requireCompleteProfile(uid: string) {
  * count, members, memberRoles, and an accepted application doc so the join
  * shows up in "My applications" and the owner's list like any other.
  */
-export const joinByInvite = onCall<{ code?: string; roleId?: string }>(async (req) => {
+export const joinByInvite = onCall<{ code?: string; roleId?: string }>({ region: CALLABLE_REGIONS }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Сначала войди в аккаунт.');
   // Mirrors the email_verified requirement on applications in firestore.rules.
@@ -111,7 +112,7 @@ export const joinByInvite = onCall<{ code?: string; roleId?: string }>(async (re
  * spam someone.
  */
 export const inviteToProject = onCall<{ projectId?: string; roleId?: string; targetUid?: string }>(
-  { secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
+  { region: CALLABLE_REGIONS, secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
   async (req) => {
     const uid = req.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Сначала войди в аккаунт.');

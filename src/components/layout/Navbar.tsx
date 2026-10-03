@@ -10,7 +10,7 @@ import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { useT } from '@/i18n';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
-// Lazy: its modal pulls in framer-motion and the form libraries, which the
+// Lazy: its modal pulls in the form libraries, which the
 // first screen (landing) doesn't need.
 const FeedbackButton = lazy(() => import('@/components/FeedbackButton').then((m) => ({ default: m.FeedbackButton })));
 
