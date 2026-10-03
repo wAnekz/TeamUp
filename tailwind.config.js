@@ -5,6 +5,9 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter Variable', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Landing headlines only (loaded in pages/Home.tsx). Picked because it
+        // covers the Kazakh letters (ә ғ қ ң ө ұ ү һ і), unlike Unbounded.
+        display: ['Geologica Variable', 'Inter Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         // Indigo/blue accent scale, kept close to Tailwind's indigo so it stays
@@ -39,10 +42,12 @@ export default {
       keyframes: {
         'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
         'slide-up': { from: { opacity: 0, transform: 'translateY(8px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+        rise: { from: { opacity: 0, transform: 'translateY(14px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
       },
       animation: {
         'fade-in': 'fade-in 160ms ease-out',
         'slide-up': 'slide-up 200ms ease-out',
+        rise: 'rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
   },

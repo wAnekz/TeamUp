@@ -8,7 +8,16 @@ import { safeUrl } from '@/utils/safeUrl';
  * for a white page. They always sit on white (also in dark mode, where a dark
  * logo would vanish), and a missing or broken image becomes an icon tile.
  */
-export function EventImage({ src, className }: { src?: string | null; className?: string }) {
+export function EventImage({
+  src,
+  className,
+  fit = 'cover',
+}: {
+  src?: string | null;
+  className?: string;
+  /** "contain" keeps wide logos whole instead of cropping their text. */
+  fit?: 'cover' | 'contain';
+}) {
   const [failed, setFailed] = useState(false);
   const url = safeUrl(src);
   if (!url || failed) {
@@ -20,7 +29,7 @@ export function EventImage({ src, className }: { src?: string | null; className?
   }
   return (
     <div className={cn('event-image-backdrop overflow-hidden rounded-xl', className)}>
-      <img src={url} alt="" loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+      <img src={url} alt="" loading="lazy" onError={() => setFailed(true)} className={cn('h-full w-full', fit === 'contain' ? 'object-contain p-2' : 'object-cover')} />
     </div>
   );
 }
