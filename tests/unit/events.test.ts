@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { devpostAudience, parseDevpostPage } from '../../functions/src/eventCollector';
+import { devpostAudience, draftsFromSite, pageToText, parseDevpostPage } from '../../functions/src/eventCollector';
 
 // "Who can participate" blocks copied from real Devpost pages (Oct 2026).
 const ALL = 'All countries/territories, excluding standard exceptions';
@@ -47,5 +47,47 @@ describe('parseDevpostPage', () => {
 
   it('returns nulls when the page has neither', () => {
     expect(parseDevpostPage('<html><body>Nothing here</body></html>')).toEqual({ eligibility: null, tagline: null });
+  });
+});
+
+describe('website source', () => {
+  const page = `<html><head><title>x</title><script>var a = 1;</script></head><body>
+    <nav><a href="/about">About</a></nav>
+    <h2>Хакатон Almaty Teens 2027</h2><p>Для учеников 8-11 классов. <a href="/reg?a=1&amp;b=2">Регистрация</a></p>
+    <a href="#top">Наверх</a><footer>© 2026</footer></body></html>`;
+
+  it('flattens a page to text with absolute links and no menus or scripts', () => {
+    expect(pageToText(page, 'https://example.kz/events/')).toBe(
+      'Хакатон Almaty Teens 2027\nДля учеников 8-11 классов. Регистрация [https://example.kz/reg?a=1&b=2]\nНаверх',
+    );
+  });
+
+  it('keeps only links that are really on the page and skips past events', () => {
+    const text = pageToText(page, 'https://example.kz/events/');
+    const drafts = draftsFromSite(
+      {
+        events: [
+          {
+            title: 'Almaty Teens 2027',
+            date: '2099-02-01',
+            registrationUrl: 'https://example.kz/reg?a=1&b=2',
+            url: 'https://made-up.example/event',
+            excerpt: 'Для учеников 8-11 классов.',
+            inKazakhstan: true,
+          },
+          { title: 'Old one', date: '2020-01-01' },
+        ],
+      },
+      'https://example.kz/events/',
+      text,
+    );
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]).toMatchObject({
+      source: 'website',
+      sourceUrl: 'https://example.kz/reg?a=1&b=2',
+      registrationUrl: 'https://example.kz/reg?a=1&b=2',
+      sourceText: 'Для учеников 8-11 классов.',
+      country: 'KZ',
+    });
   });
 });

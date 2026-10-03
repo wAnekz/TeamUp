@@ -243,6 +243,7 @@ export function useSetEventDraftStatus() {
 
 export interface EventSources {
   telegramChannels: string[];
+  websites: string[];
   devpost: boolean;
 }
 
@@ -253,7 +254,11 @@ export function useEventSources(enabled: boolean) {
     queryFn: async (): Promise<EventSources> => {
       const snap = await getDoc(doc(db, 'eventSources', 'config'));
       const data = snap.data();
-      return { telegramChannels: data?.telegramChannels ?? [], devpost: data?.devpost ?? true };
+      return {
+        telegramChannels: data?.telegramChannels ?? [],
+        websites: data?.websites ?? [],
+        devpost: data?.devpost ?? true,
+      };
     },
   });
 }

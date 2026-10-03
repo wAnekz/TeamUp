@@ -405,7 +405,7 @@ export type EventDraftStatus = 'pending' | 'approved' | 'rejected';
 
 export interface EventDraft {
   id: string;
-  source: 'devpost' | 'telegram';
+  source: 'devpost' | 'telegram' | 'website';
   sourceUrl: string;
   sourceText?: string | null;
   title: string;

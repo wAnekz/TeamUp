@@ -17,9 +17,12 @@ import { logger } from 'firebase-functions/v2';
  *     where Kazakhstani organizers actually announce things. Posts are free
  *     text in RU/KZ/EN, so a Groq LLM pulls out title/dates/links and says
  *     whether it's a competition school students can enter at all.
+ *   - Organizer websites (moderator-listed page URLs). Every site is laid
+ *     out differently, so the page is flattened to text (links kept) and
+ *     the same LLM lists the upcoming events on it. Also drafts only.
  *
  * Uses the same GROQ_API_KEY secret as contentFilter.ts. Without it, the
- * Telegram half is skipped (Devpost still works — it's structured already).
+ * Telegram and website halves are skipped (Devpost still works — it's structured already).
  */
 
 const GROQ_API_KEY = defineSecret('GROQ_API_KEY');
@@ -28,6 +31,9 @@ const DEFAULT_TELEGRAM_CHANNELS = ['astana_hub'];
 const MAX_POST_AGE_DAYS = 21;
 const MAX_LLM_CALLS_PER_RUN = 40;
 const MAX_DEVPOST_PER_RUN = 15;
+const MAX_WEBSITES = 20;
+const MAX_PAGE_TEXT = 12_000; // keeps one page well under the Groq per-call token budget
+const MAX_EVENTS_PER_PAGE = 10;
 const MIN_DAYS_LEFT = 5; // not worth a moderator's time if it closes this week
 
 // Cheap pre-filter so the LLM only sees posts that might be competitions.
@@ -41,7 +47,7 @@ export interface DescriptionI18n {
 }
 
 interface DraftFields {
-  source: 'devpost' | 'telegram';
+  source: 'devpost' | 'telegram' | 'website';
   sourceUrl: string;
   sourceText?: string | null;
   title: string;
@@ -321,9 +327,9 @@ Respond with ONLY a JSON object:
 }
 Resolve relative dates ("до 15 октября") using the post date given below. Never invent links or dates.`;
 
-// null = looked at it, not an event. 'retry' = the call itself failed, so
-// don't mark it seen — try again tomorrow.
-export async function extractWithLlm(post: TelegramPost, apiKey: string): Promise<DraftFields | null | 'retry'> {
+// Shared by the Telegram and website extractors. Returns the parsed JSON,
+// or 'retry' when the call itself failed (so the source isn't marked seen).
+async function askGroq(system: string, user: string, apiKey: string): Promise<Record<string, unknown> | null | 'retry'> {
   const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -332,8 +338,8 @@ export async function extractWithLlm(post: TelegramPost, apiKey: string): Promis
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: EXTRACT_PROMPT },
-        { role: 'user', content: `POST DATE: ${post.date.toISOString().slice(0, 10)}\nPOST:\n${post.text.slice(0, 3500)}` },
+        { role: 'system', content: system },
+        { role: 'user', content: user },
       ],
     }),
   });
@@ -342,13 +348,19 @@ export async function extractWithLlm(post: TelegramPost, apiKey: string): Promis
     return 'retry';
   }
   const data = (await res.json()) as { choices: [{ message: { content: string } }] };
-  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(data.choices[0]?.message?.content ?? '{}');
+    return JSON.parse(data.choices[0]?.message?.content ?? '{}');
   } catch {
     return null;
   }
-  if (parsed.isEvent !== true || typeof parsed.title !== 'string') return null;
+}
+
+type DraftBase = Pick<DraftFields, 'source' | 'sourceUrl' | 'sourceText' | 'imageUrl' | 'country'>;
+
+// One event object from the LLM → a draft, or null if it isn't an upcoming
+// event (already over, no title).
+export function draftFromLlm(parsed: Record<string, unknown>, base: DraftBase): DraftFields | null {
+  if (typeof parsed.title !== 'string' || !parsed.title.trim()) return null;
 
   const date = parseDate(parsed.date);
   const registrationDeadline = parseDate(parsed.registrationDeadline);
@@ -363,14 +375,10 @@ export async function extractWithLlm(post: TelegramPost, apiKey: string): Promis
 
   const descriptionI18n = toI18n(parsed.description);
   return {
-    source: 'telegram',
-    sourceUrl: post.url,
-    sourceText: post.text.slice(0, 2000),
-    title: parsed.title.slice(0, 120),
-    description: (descriptionI18n?.ru ?? (str(parsed.description) ? String(parsed.description) : post.text)).slice(0, 800),
+    ...base,
+    title: parsed.title.trim().slice(0, 120),
+    description: (descriptionI18n?.ru ?? (str(parsed.description) ? String(parsed.description) : base.sourceText ?? '')).slice(0, 800),
     descriptionI18n,
-    // The configured channels are Kazakhstani organizers.
-    country: 'KZ',
     date,
     registrationDeadline,
     format,
@@ -378,20 +386,160 @@ export async function extractWithLlm(post: TelegramPost, apiKey: string): Promis
     organizer: str(parsed.organizer),
     registrationUrl: regUrl,
     prizePool: str(parsed.prizePool),
-    imageUrl: post.imageUrl,
     forSchoolStudents: typeof parsed.forSchoolStudents === 'boolean' ? parsed.forSchoolStudents : null,
   };
+}
+
+// null = looked at it, not an event. 'retry' = the call itself failed, so
+// don't mark it seen — try again tomorrow.
+export async function extractWithLlm(post: TelegramPost, apiKey: string): Promise<DraftFields | null | 'retry'> {
+  const parsed = await askGroq(
+    EXTRACT_PROMPT,
+    `POST DATE: ${post.date.toISOString().slice(0, 10)}\nPOST:\n${post.text.slice(0, 3500)}`,
+    apiKey,
+  );
+  if (parsed === 'retry') return 'retry';
+  if (!parsed || parsed.isEvent !== true) return null;
+  return draftFromLlm(parsed, {
+    source: 'telegram',
+    sourceUrl: post.url,
+    sourceText: post.text.slice(0, 2000),
+    // The configured channels are Kazakhstani organizers.
+    country: 'KZ',
+    imageUrl: post.imageUrl,
+  });
+}
+
+// ---------------- websites ----------------
+
+/**
+ * Flattens an organizer's page to plain text for the LLM. Links are kept as
+ * "text [absolute url]" so it can return registration links that really
+ * are on the page; nav/header/footer are dropped so menus don't eat the
+ * text budget.
+ */
+export function pageToText(html: string, pageUrl: string): string {
+  const abs = (href: string) => {
+    try {
+      const u = new URL(href.replace(/&amp;/g, '&'), pageUrl);
+      if (!/^https?:$/.test(u.protocol)) return null;
+      // Readable Cyrillic paths, so the LLM copies them back exactly.
+      try {
+        return decodeURI(u.href);
+      } catch {
+        return u.href;
+      }
+    } catch {
+      return null;
+    }
+  };
+  const body = html
+    .replace(/<head[\s\S]*?<\/head>/gi, ' ')
+    .replace(/<(script|style|noscript|svg|nav|header|footer|form|iframe)\b[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<a\b[^>]*?href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href: string, inner: string) => {
+      const text = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      const url = abs(href);
+      if (!text) return ' ';
+      return url && !href.startsWith('#') ? ` ${text} [${url}] ` : ` ${text} `;
+    })
+    .replace(/<\/(p|div|li|h[1-6]|tr|section|article|table|ul|ol)>/gi, '\n');
+  return decodeHtml(body)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+export async function fetchPageText(url: string): Promise<string | null> {
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TeamUpEventCollector/1.0)', 'Accept-Language': 'ru,kk;q=0.9,en;q=0.8' },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) {
+    logger.warn(`Website ${url} returned ${res.status}`);
+    return null;
+  }
+  if (!(res.headers.get('content-type') ?? '').includes('html')) {
+    logger.warn(`Website ${url} is not an HTML page`);
+    return null;
+  }
+  const html = (await res.text()).slice(0, 3_000_000);
+  return pageToText(html, res.url || url);
+}
+
+const SITE_PROMPT = `You read the text of an organizer's website (Russian, Kazakh or English) for TeamUp,
+an app where high school students in Kazakhstan (grades 9-12, ages 14-18) find teammates.
+List every UPCOMING competition on the page a team or student can still register for:
+hackathon, olympiad, case championship, science fair, startup contest, challenge.
+Past events, results, winners, news, courses, meetups, vacancies and ads are NOT events.
+Links in the text look like "label [https://...]".
+
+Respond with ONLY a JSON object: {"events": [ ... ]} (empty array if there are none, at most ${MAX_EVENTS_PER_PAGE}).
+Each event:
+{
+  "title": string,
+  "forSchoolStudents": boolean,   // true if school students can take part (or no age limit is stated), false if only university students/adults
+  "description": {"ru": string, "kz": string, "en": string}, // 1-2 plain sentences each: what it is, who can join. No hype, no em dashes
+  "excerpt": string,              // the page's own words about this event, copied verbatim, up to 500 characters
+  "url": string | null,           // link to this event's own page, copied from the text
+  "date": "YYYY-MM-DD" | null,    // when the event itself happens (first day)
+  "registrationDeadline": "YYYY-MM-DD" | null,
+  "format": "online" | "offline" | "hybrid",
+  "location": string | null,
+  "organizer": string | null,
+  "registrationUrl": string | null, // registration link copied from the text
+  "prizePool": string | null,
+  "inKazakhstan": boolean         // held in Kazakhstan or specifically for Kazakhstani students
+}
+Use TODAY below to resolve dates without a year. Never invent links or dates: only use URLs that appear in the text.`;
+
+// Every link the LLM returns must have been on the page; anything else is
+// dropped rather than trusted.
+function linkOnPage(value: unknown, text: string): string | null {
+  return typeof value === 'string' && /^https?:\/\//.test(value) && text.includes(value) ? value : null;
+}
+
+export function draftsFromSite(parsed: Record<string, unknown>, pageUrl: string, text: string): DraftFields[] {
+  const events = Array.isArray(parsed.events) ? parsed.events.slice(0, MAX_EVENTS_PER_PAGE) : [];
+  const out: DraftFields[] = [];
+  for (const raw of events) {
+    if (!raw || typeof raw !== 'object') continue;
+    const ev = raw as Record<string, unknown>;
+    const ownUrl = linkOnPage(ev.url, text);
+    const registrationUrl = linkOnPage(ev.registrationUrl, text);
+    const title = typeof ev.title === 'string' ? ev.title.trim() : '';
+    // Dedupe key: the event's own page, else its registration link, else
+    // page + title (one listing page can hold several events).
+    const sourceUrl = ownUrl ?? registrationUrl ?? `${pageUrl}#${encodeURIComponent(title.toLowerCase().slice(0, 80))}`;
+    const draft = draftFromLlm(
+      { ...ev, registrationUrl },
+      {
+        source: 'website',
+        sourceUrl,
+        sourceText: typeof ev.excerpt === 'string' ? ev.excerpt.slice(0, 2000) : null,
+        country: ev.inKazakhstan === true ? 'KZ' : null,
+        imageUrl: null,
+      },
+    );
+    if (draft) out.push(draft);
+  }
+  return out;
 }
 
 // ---------------- scheduler ----------------
 
 export const collectEvents = onSchedule(
-  { schedule: 'every day 07:00', timeZone: 'Asia/Almaty', secrets: [GROQ_API_KEY], timeoutSeconds: 300 },
+  { schedule: 'every day 07:00', timeZone: 'Asia/Almaty', secrets: [GROQ_API_KEY], timeoutSeconds: 540 },
   async () => {
     const db = getFirestore();
     const config = (await db.doc('eventSources/config').get()).data();
     const channels: string[] = config?.telegramChannels ?? DEFAULT_TELEGRAM_CHANNELS;
     const useDevpost = config?.devpost !== false;
+    const websites: string[] = (Array.isArray(config?.websites) ? config.websites : [])
+      .filter((u: unknown): u is string => typeof u === 'string' && /^https?:\/\//.test(u))
+      .slice(0, MAX_WEBSITES);
 
     // collectorSeen/{key} remembers every source URL already looked at —
     // drafts, rejects and non-events alike — so nothing is re-sent to the
@@ -537,6 +685,35 @@ export const collectEvents = onSchedule(
           }
         } catch (err) {
           logger.error(`collectEvents: channel ${channel} failed`, err);
+        }
+      }
+    }
+
+    if (apiKey) {
+      for (const site of websites) {
+        if (llmCalls >= MAX_LLM_CALLS_PER_RUN) break;
+        try {
+          const text = await fetchPageText(site);
+          if (!text || text.length < 200) {
+            logger.warn(`collectEvents: ${site} has almost no text (probably rendered by JavaScript)`);
+            continue;
+          }
+          const pageText = text.slice(0, MAX_PAGE_TEXT);
+          // Only ask the LLM again when the page actually changed.
+          const pageKey = `collectorSeen/${keyFor(`page:${site}`)}`;
+          const hash = createHash('sha1').update(pageText).digest('hex');
+          if ((await db.doc(pageKey).get()).data()?.hash === hash) continue;
+          llmCalls++;
+          const parsed = await askGroq(SITE_PROMPT, `TODAY: ${new Date().toISOString().slice(0, 10)}\nPAGE: ${site}\nTEXT:\n${pageText}`, apiKey);
+          if (parsed === 'retry') continue;
+          for (const draft of parsed ? draftsFromSite(parsed, site, pageText) : []) {
+            if (await isSeen(draft.sourceUrl)) continue;
+            await saveDraft(draft);
+            queued++;
+          }
+          await db.doc(pageKey).set({ url: site, hash, seenAt: FieldValue.serverTimestamp() });
+        } catch (err) {
+          logger.error(`collectEvents: website ${site} failed`, err);
         }
       }
     }

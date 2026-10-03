@@ -344,7 +344,7 @@ export const en = {
   },
   eventDrafts: {
     title: 'Found automatically',
-    subtitle: 'Collected once a day from Devpost and the Telegram channels below. Open one to check the details and publish it, or reject it.',
+    subtitle: 'Collected once a day from Devpost and the Telegram channels and websites below. Open one to check the details and publish it, or reject it.',
     empty: 'Nothing waiting - the next collection runs within 24 hours.',
     fits: 'Fits school students',
     notFits: 'Probably not for school students',
@@ -356,6 +356,7 @@ export const en = {
     sources: 'Sources',
     devpost: 'Devpost (online hackathons)',
     tgChannels: 'Public Telegram channels (must have a t.me/s/ web preview):',
+    websites: "Organizer websites (link to the page that lists events; sites that load the list with a script can't be read):",
     none: 'None yet',
     saveSources: 'Save sources',
     sourcesSaved: 'Sources saved',

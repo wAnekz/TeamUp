@@ -44,7 +44,7 @@ function draftToInput(d: EventDraft): Partial<EventInput> {
 
 /**
  * Review queue for events the collectEvents function found on its own
- * (Devpost + public Telegram channels). Nothing reaches /events without a
+ * (Devpost, public Telegram channels and organizer websites). Nothing reaches /events without a
  * moderator opening it here — the extractor is good, not trustworthy.
  */
 export default function EventDrafts() {
@@ -144,14 +144,17 @@ function SourcesCard() {
   const { data: sources } = useEventSources(true);
   const save = useSaveEventSources();
   const [channels, setChannels] = useState<string[]>([]);
+  const [websites, setWebsites] = useState<string[]>([]);
   const [devpost, setDevpost] = useState(true);
   const [input, setInput] = useState('');
+  const [siteInput, setSiteInput] = useState('');
   const tAll = useT();
   const t = tAll.eventDrafts;
 
   useEffect(() => {
     if (!sources) return;
     setChannels(sources.telegramChannels);
+    setWebsites(sources.websites);
     setDevpost(sources.devpost);
   }, [sources]);
 
@@ -167,8 +170,24 @@ function SourcesCard() {
     setInput('');
   };
 
+  const addSite = () => {
+    let url: URL;
+    try {
+      url = new URL(/^https?:\/\//i.test(siteInput.trim()) ? siteInput.trim() : `https://${siteInput.trim()}`);
+    } catch {
+      return;
+    }
+    if (!/^https?:$/.test(url.protocol) || !url.hostname.includes('.') || websites.includes(url.href)) return;
+    if (websites.length >= 20) return; // the collector reads at most 20
+    setWebsites([...websites, url.href]);
+    setSiteInput('');
+  };
+
   const dirty =
-    !!sources && (devpost !== sources.devpost || channels.join(',') !== sources.telegramChannels.join(','));
+    !!sources &&
+    (devpost !== sources.devpost ||
+      channels.join(',') !== sources.telegramChannels.join(',') ||
+      websites.join(',') !== sources.websites.join(','));
 
   return (
     <Card>
@@ -201,12 +220,43 @@ function SourcesCard() {
           {tAll.common.add}
         </Button>
       </div>
+      <p className="mt-4 text-xs text-surface-500">{t.websites}</p>
+      <ul className="mt-1.5 space-y-1">
+        {websites.map((w) => (
+          <li key={w} className="flex items-center gap-2 text-xs text-surface-700">
+            <span className="min-w-0 flex-1 truncate">{w}</span>
+            <button
+              type="button"
+              aria-label={`Remove ${w}`}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-surface-100"
+              onClick={() => setWebsites(websites.filter((x) => x !== w))}
+            >
+              <X size={12} />
+            </button>
+          </li>
+        ))}
+        {websites.length === 0 && <li className="text-xs text-surface-400">{t.none}</li>}
+      </ul>
+      <div className="mt-2 flex gap-2">
+        <input
+          value={siteInput}
+          onChange={(e) => setSiteInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSite())}
+          placeholder="https://example.kz/events"
+          inputMode="url"
+          aria-label={t.websites}
+          className="min-w-0 flex-1 rounded-xl border border-surface-400 px-3 py-2 text-sm focus:border-accent-500"
+        />
+        <Button size="sm" variant="secondary" onClick={addSite} type="button">
+          {tAll.common.add}
+        </Button>
+      </div>
       {dirty && (
         <Button
           size="sm"
           className="mt-3"
           loading={save.isPending}
-          onClick={() => save.mutate({ telegramChannels: channels, devpost }, { onSuccess: () => toast.success(t.sourcesSaved) })}
+          onClick={() => save.mutate({ telegramChannels: channels, websites, devpost }, { onSuccess: () => toast.success(t.sourcesSaved) })}
         >
           {t.saveSources}
         </Button>
