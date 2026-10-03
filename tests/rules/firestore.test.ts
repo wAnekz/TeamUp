@@ -216,11 +216,31 @@ describe('XP cannot be self-granted', () => {
 });
 
 describe('teams and applications', () => {
-  it('only the owner edits a project; anyone signed in may bump views', async () => {
+  it('only the owner edits a project', async () => {
     await assertFails(updateDoc(doc(as('bob'), 'projects/p1'), { title: 'mine now' }));
     await assertFails(updateDoc(doc(as('bob'), 'projects/p1'), { members: ['bob'] }));
-    await assertSucceeds(updateDoc(doc(as('bob'), 'projects/p1'), { viewCount: 1 }));
     await assertSucceeds(updateDoc(doc(as('alice'), 'projects/p1'), { result: { text: '1st', eventName: 'X' } }));
+  });
+
+  it('each person adds one view, once', async () => {
+    const view = (uid: string) => {
+      const db = as(uid);
+      const batch = writeBatch(db);
+      batch.set(doc(db, `projects/p1/viewers/${uid}`), { createdAt: serverTimestamp() });
+      batch.update(doc(db, 'projects/p1'), { viewCount: 1 });
+      return batch.commit();
+    };
+    // A bare +1 without the viewer marker is what the old client did.
+    await assertFails(updateDoc(doc(as('bob'), 'projects/p1'), { viewCount: 1 }));
+    await assertSucceeds(view('bob'));
+    // Second visit: the marker already exists.
+    const bob = as('bob');
+    const again = writeBatch(bob);
+    again.set(doc(bob, 'projects/p1/viewers/bob'), { createdAt: serverTimestamp() });
+    again.update(doc(bob, 'projects/p1'), { viewCount: 2 });
+    await assertFails(again.commit());
+    await assertFails(setDoc(doc(as('bob'), 'projects/p1/viewers/carol'), { createdAt: serverTimestamp() }));
+    await assertFails(getDoc(doc(as('alice'), 'projects/p1/viewers/bob')));
   });
 
   it('an application cannot pretend to come from an invite link', async () => {
@@ -356,6 +376,39 @@ describe('profile fields stay within the form limits', () => {
     const base = { uid: 'fresh', skills: [], interests: [], verified: false, isStudentConfirmed: false, profileComplete: false };
     await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, name: 'x'.repeat(61) }));
     await assertSucceeds(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, name: '' }));
+  });
+});
+
+describe('profiles need a confirmed email to view', () => {
+  it('an unconfirmed account sees only its own profile and achievements', async () => {
+    await assertFails(getDoc(doc(as('newbie', false), 'users/alice')));
+    await assertFails(getDocs(collection(as('newbie', false), 'users/alice/achievements')));
+    await assertSucceeds(getDoc(doc(as('newbie', false), 'users/newbie')));
+    await assertSucceeds(getDocs(collection(as('newbie', false), 'users/newbie/achievements')));
+    await assertSucceeds(getDoc(doc(as('bob'), 'users/alice')));
+  });
+});
+
+describe('applications cannot be probed or sent to closed teams', () => {
+  const application = (projectId: string) => ({
+    projectId, roleId: 'r1', applicantId: 'bob', applicantName: 'bob', applicantAvatarUrl: null,
+    ownerId: 'alice', message: 'hi', status: 'pending', createdAt: serverTimestamp(),
+  });
+
+  it('nobody can check whether someone else applied', async () => {
+    await assertFails(getDoc(doc(as('carol'), 'applications/p1_r1_bob')));
+    await assertSucceeds(getDoc(doc(as('bob'), 'applications/p1_r1_bob')));
+  });
+
+  it('a closed project or a draft takes no applications', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, 'projects/pclosed'), { title: 'C', authorId: 'alice', isDraft: false, status: 'closed', members: [], roles: [] });
+      await setDoc(doc(db, 'projects/pdraft'), { title: 'D', authorId: 'alice', isDraft: true, status: 'open', members: [], roles: [] });
+    });
+    await assertFails(setDoc(doc(as('bob'), 'applications/pclosed_r1_bob'), application('pclosed')));
+    await assertFails(setDoc(doc(as('bob'), 'applications/pdraft_r1_bob'), application('pdraft')));
+    await assertSucceeds(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), application('p1')));
   });
 });
 

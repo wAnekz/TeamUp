@@ -386,6 +386,7 @@ export const en = {
   },
   profile: {
     notFound: 'User not found.',
+    verifyToView: "Confirm your email to view other students' profiles. The link is in the email we sent; you can resend it from the banner at the top.",
     grade: (g: number) => `Grade ${g}`,
     contact: 'Contact',
     savePdf: 'Save as PDF',

@@ -14,6 +14,7 @@ import {
   increment,
   deleteField,
   serverTimestamp,
+  writeBatch,
   type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -155,17 +156,21 @@ export function useProject(id: string | undefined, guest = false) {
 }
 
 /**
- * Fire-and-forget view counter. Guarded by sessionStorage so refreshing or
- * re-opening the same project in one browser session doesn't inflate the
- * count — this is a lightweight signal, not an analytics-grade unique count.
+ * Fire-and-forget unique view counter. firestore.rules allow the +1 only
+ * together with this user's first projects/{id}/viewers/{uid} marker in
+ * the same batch, so a repeat visit is rejected server-side; that rejection
+ * is expected and swallowed. sessionStorage just saves the doomed request.
  */
 export function useIncrementProjectView() {
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, uid }: { id: string; uid: string }) => {
       const key = `viewed:${id}`;
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, '1');
-      await updateDoc(doc(db, 'projects', id), { viewCount: increment(1) });
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'projects', id, 'viewers', uid), { createdAt: serverTimestamp() });
+      batch.update(doc(db, 'projects', id), { viewCount: increment(1) });
+      await batch.commit().catch(() => {});
     },
   });
 }

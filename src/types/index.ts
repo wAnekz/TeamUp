@@ -180,7 +180,7 @@ export interface UserContacts {
 export interface UserProfile {
   uid: string;
   // NOT stored on the users/{uid} doc itself (that doc is readable by any
-  // signed-in user — see firestore.rules). Lives in users/{uid}/private/info
+  // signed-in user with a confirmed email — see firestore.rules). Lives in users/{uid}/private/info
   // instead, and AuthContext.loadProfile merges it into this object
   // in-memory, only for the signed-in user's own profile. Never present on
   // profiles fetched via usePublicProfile.

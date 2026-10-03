@@ -55,7 +55,7 @@ export default function ProjectDetail() {
 
   useEffect(() => {
     // Guests can't write (rules) — and the mirror isn't the counted doc anyway.
-    if (id && user) incrementView.mutate(id);
+    if (id && user) incrementView.mutate({ id, uid: user.uid });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user]);
 

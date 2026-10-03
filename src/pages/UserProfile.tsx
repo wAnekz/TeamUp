@@ -15,10 +15,15 @@ import { interestLabel, skillLabel, useT } from '@/i18n';
 
 export default function UserProfile() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const { data: profile, isLoading } = usePublicProfile(id);
+  const { user, emailVerified } = useAuth();
+  // Rules only show other students' profiles to confirmed emails; say so
+  // instead of a misleading "not found".
+  const blocked = !emailVerified && !!user && user.uid !== id;
+  const { data: profile, isLoading } = usePublicProfile(blocked ? undefined : id);
   const tAll = useT();
   const t = tAll.profile;
+
+  if (blocked) return <p className="mx-auto max-w-md text-center text-surface-600">{t.verifyToView}</p>;
 
   if (isLoading) {
     return (

@@ -88,7 +88,10 @@ service cloud.firestore {
           && (!('interests' in d) || (d.interests is list && d.interests.size() <= 70));
       }
 
-      allow read: if isSignedIn();
+      // Age, school and city of minors: only for confirmed emails, so a
+      // throwaway signup can't browse everyone. Your own doc is always
+      // readable (onboarding happens before the email is confirmed).
+      allow read: if isOwner(userId) || isEmailVerified();
       // banned, verified, isStudentConfirmed and profileComplete are set by
       // moderators or the completeProfile function, never by the student.
       allow create: if isOwner(userId)
@@ -156,7 +159,7 @@ service cloud.firestore {
           && isOptionalUrl(d, 'link')
           && isOptionalUrl(d, 'fileUrl');
       }
-      allow read: if isSignedIn();
+      allow read: if isOwner(userId) || isEmailVerified();
       allow create, update: if isOwner(userId) && validAchievement();
       allow delete: if isOwner(userId);
     }
@@ -251,10 +254,23 @@ service cloud.firestore {
         return r == null || isOptionalUrl(r, 'link');
       }
 
+      // +1 only together with this viewer's first marker doc in the same
+      // batch, so each person counts once no matter how often they reload.
       function isViewCountIncrement() {
+        let marker = /databases/$(database)/documents/projects/$(projectId)/viewers/$(request.auth.uid);
         return isSignedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
-          && request.resource.data.viewCount == resource.data.viewCount + 1;
+          && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1
+          && !exists(marker)
+          && existsAfter(marker);
+      }
+
+      match /viewers/{viewerId} {
+        allow create: if isSignedIn()
+          && viewerId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && isServerCreatedAt();
+        allow read, update, delete: if false;
       }
 
       match /messages/{messageId} {
@@ -286,8 +302,10 @@ service cloud.firestore {
 
     // ---------------- applications ----------------
     match /applications/{applicationId} {
+      // A missing doc is readable only under your own id (the client checks
+      // "did I already apply?"), so nobody can probe whether X applied to Y.
       allow read: if isSignedIn()
-        && (resource == null
+        && ((resource == null && applicationId.matches('.*_' + request.auth.uid))
             || resource.data.applicantId == request.auth.uid
             || resource.data.ownerId == request.auth.uid);
 
@@ -297,6 +315,8 @@ service cloud.firestore {
         && request.resource.data.status == 'pending'
         && request.resource.data.ownerId != request.auth.uid
         && request.resource.data.ownerId == get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.authorId
+        && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.status == 'open'
+        && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.get('isDraft', false) == false
         && !('viaInvite' in request.resource.data) // set only by joinByInvite
         && isMyName(request.resource.data.applicantName)
         && isMyAvatar(request.resource.data.get('applicantAvatarUrl', null))

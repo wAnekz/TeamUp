@@ -112,7 +112,7 @@ functions/
 
 - **users/{uid}** - profile, skills, interests, `schoolId`. Readable by any signed-in user (never by guests).
 - **users/{uid}/private/contacts** - Telegram/GitHub/portfolio/Instagram. Readable only by the owner and uids in `visibleTo` (everyone they share a team with), which only `functions/src/contacts.ts` writes - recomputed on every team change plus a daily reconcile that also migrates legacy `users/{uid}.contacts`.
-- **users/{uid}/private/{docId}** - email lives here, in its own subdocument, not as a field on `users/{uid}`. `users/{uid}` is readable by any signed-in user by design; Firestore rules can't hide a single field from a whole-document read, so email can never safely live there. Restricted to the owner only - Cloud Functions read it fine regardless, since the Admin SDK bypasses rules.
+- **users/{uid}/private/{docId}** - email lives here, in its own subdocument, not as a field on `users/{uid}`. `users/{uid}` is readable by every signed-in user with a confirmed email (and by its owner); Firestore rules can't hide a single field from a whole-document read, so email can never safely live there. Restricted to the owner only - Cloud Functions read it fine regardless, since the Admin SDK bypasses rules.
 - **projects/{id}** - roles with slot counts, denormalized `teamSizeCurrent`/`teamSizeMax` so the feed doesn't need sub-reads.
 - **applications/{id}** - deterministic doc ID (`projectId_roleId_applicantId`) instead of `addDoc()` + a client-side existence check. A second attempt at the same ID is an `update`, which the rules reject - no race window, no reliance on the client behaving.
 - **users/{uid}/achievements/{id}** - portfolio entries; files in Storage under `achievements/{uid}/`.
@@ -143,11 +143,19 @@ The userbase is 14–18, so this got more attention than a typical side project:
 
 ## Deploy, backups and rollback
 
-**Deploy order.** Rules and functions first, then the frontend. Netlify is not connected to git: pushing `main` publishes nothing, the site is deployed from a local build with the Netlify CLI (it bakes in the `VITE_*` values from `.env`):
+**Deploy order.** Rules and functions first (by hand), then the frontend. Netlify is not connected to git; instead the `deploy` job in `.github/workflows/ci.yml` publishes every push to `main` once all checks (types, lint, unit, rules, e2e) are green. It builds from the commit with the `VITE_*` values stored as GitHub secrets, and skips itself with a warning while any of them is missing. One-time setup:
+```bash
+gh secret set -f <(grep -E '^VITE_(FIREBASE|TELEGRAM)_' .env)   # the VITE_* values
+gh secret set NETLIFY_AUTH_TOKEN   # personal access token from app.netlify.com/user/applications
+```
+Rules and functions, then push:
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes,storage
 firebase deploy --only functions
-npm run build && netlify deploy --prod --dir=dist --message "<what>: $(git rev-parse --short HEAD)"
+```
+Manual fallback if CI is down (bakes in the `VITE_*` values from your local `.env`):
+```bash
+npm run build && netlify deploy --prod --dir=dist --site 22096e48-1663-46f8-b37d-4c7396b08937 --message "<what>: $(git rev-parse --short HEAD)"
 ```
 The five callables (`acceptApplication`, `joinByInvite`, `inviteToProject`, `completeProfile`, `backfillXp`) run in `europe-west1` (`functions/src/region.ts`), the client calls them there (`src/lib/firebaseFunctions.ts`). To move a callable between regions without breaking open tabs: deploy it to both regions (`CALLABLE_REGIONS`), publish the frontend that calls the new region, then drop the old region from `CALLABLE_REGIONS` and run `firebase deploy --only functions:<name> --force` (the `--force` deletes the copy left in the old region).
 
