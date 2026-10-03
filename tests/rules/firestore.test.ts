@@ -35,22 +35,30 @@ const guest = () => env.unauthenticatedContext().firestore();
 const as = (uid: string, verified = true) =>
   env.authenticatedContext(uid, { email_verified: verified, email: `${uid}@example.com` }).firestore();
 
-// The Firestore emulator can reset the very first connection right after it
-// reports "ready" (seen on macOS), so poke it until it answers.
-async function waitForFirestoreEmulator() {
-  const host = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080';
-  for (let i = 0; i < 20; i++) {
+// The emulators can reset the first connection right after they report
+// "ready" (seen on macOS), so probe both services until they answer.
+async function waitForEmulator(host: string, label: string) {
+  for (let i = 0; i < 40; i++) {
     try {
-      if ((await fetch(`http://${host}/`)).ok) return;
+      const res = await fetch(`http://${host}/`);
+      if (res.status >= 200 && res.status < 600) return;
     } catch {
       // not ready yet
     }
     await new Promise((r) => setTimeout(r, 500));
   }
+  throw new Error(`${label} emulator did not become ready on ${host}`);
 }
 
 beforeAll(async () => {
-  await waitForFirestoreEmulator();
+  process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
+  process.env.FIREBASE_STORAGE_EMULATOR_HOST ??= '127.0.0.1:9199';
+
+  await Promise.all([
+    waitForEmulator(process.env.FIRESTORE_EMULATOR_HOST, 'Firestore'),
+    waitForEmulator(process.env.FIREBASE_STORAGE_EMULATOR_HOST, 'Storage'),
+  ]);
+
   env = await initializeTestEnvironment({
     projectId: 'demo-teamup',
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
