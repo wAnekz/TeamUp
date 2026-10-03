@@ -86,7 +86,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
     <div>
       <h2 className="mb-3 text-lg font-semibold text-surface-900">{t.title}</h2>
       <div className="flex flex-col overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-card">
-        <div className="max-h-96 min-h-[220px] space-y-3 overflow-y-auto p-4">
+        <div role="log" aria-live="polite" aria-busy={loading} className="max-h-96 min-h-[220px] space-y-3 overflow-y-auto p-4">
           {error && (
             <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
               <p>{t.loadError}</p>
@@ -164,7 +164,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
               }
             }}
             placeholder={t.placeholder}
-            className="flex-1 rounded-xl border border-surface-200 px-3.5 py-2 text-sm focus:border-accent-500"
+            className="flex-1 rounded-xl border border-surface-400 px-3.5 py-2 text-sm focus:border-accent-500"
           />
           <button
             type="button"

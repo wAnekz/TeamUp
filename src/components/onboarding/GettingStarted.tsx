@@ -133,7 +133,7 @@ export function GettingStarted() {
           type="button"
           onClick={dismiss}
           aria-label={t.hide}
-          className="rounded-lg p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-600"
+          className="relative rounded-lg p-1 text-surface-400 after:absolute after:-inset-2.5 after:content-[''] hover:bg-surface-100 hover:text-surface-600"
         >
           <X size={16} />
         </button>

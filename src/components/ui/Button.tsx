@@ -18,7 +18,8 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm rounded-lg',
+  // Looks 32px tall, but the invisible ::after stretches the tap area to 44px (WCAG 2.5.5).
+  sm: "relative h-8 px-3 text-sm rounded-lg after:absolute after:inset-x-0 after:-inset-y-1.5 after:content-['']",
   md: 'h-10 px-4 text-sm rounded-xl',
   lg: 'h-12 px-6 text-base rounded-xl',
 };

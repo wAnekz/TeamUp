@@ -85,7 +85,7 @@ export function FeedbackButton({
               rows={5}
               maxLength={2000}
               placeholder={t.placeholder}
-              className="w-full resize-none rounded-xl border border-surface-200 p-3 text-sm text-surface-900 outline-none focus:border-accent-400"
+              className="w-full resize-none rounded-xl border border-surface-400 p-3 text-sm text-surface-900 outline-none focus:border-accent-400"
             />
             <Button className="w-full" onClick={submit} disabled={!message.trim()} loading={isPending}>
               {tAll.common.send}

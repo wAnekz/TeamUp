@@ -60,7 +60,7 @@ export default function LookingForTeam() {
           <span>
             {t.showingFor} <strong>{eventTag}</strong>
           </span>
-          <button type="button" onClick={clearEventFilter} className="shrink-0 rounded-lg p-1 hover:bg-accent-100" aria-label={t.clear}>
+          <button type="button" onClick={clearEventFilter} className="relative shrink-0 rounded-lg p-1 after:absolute after:-inset-3 after:content-[''] hover:bg-accent-100" aria-label={t.clear}>
             <X size={14} />
           </button>
         </div>
@@ -245,7 +245,7 @@ function CreatePostModal({
               onChange={(e) => setCompetitionInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCompetition())}
               placeholder="AI Hackathon 2026"
-              className="flex-1 rounded-xl border border-surface-200 px-3.5 py-2 text-sm focus:border-accent-500"
+              className="flex-1 rounded-xl border border-surface-400 px-3.5 py-2 text-sm focus:border-accent-500"
             />
             <Button type="button" variant="secondary" onClick={addCompetition}>
               {tAll.common.add}

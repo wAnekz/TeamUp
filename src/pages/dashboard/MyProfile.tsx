@@ -206,7 +206,7 @@ export default function MyProfile() {
               <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.grade_}</span>
               <select
                 {...register('grade')}
-                className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
+                className="w-full rounded-xl border border-surface-400 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
               >
                 {GRADE_OPTIONS.map((g) => (
                   <option key={g} value={g}>

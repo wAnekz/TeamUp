@@ -113,7 +113,7 @@ export function EventFormModal({
             <select
               value={form.format}
               onChange={(e) => set('format', e.target.value as EventFormat)}
-              className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
+              className="w-full rounded-xl border border-surface-400 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
             >
               {EVENT_FORMAT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -196,13 +196,13 @@ export function EventFormModal({
                   value={r.title}
                   onChange={(e) => setResource(i, { title: e.target.value })}
                   placeholder={t.materialTitle}
-                  className="w-2/5 rounded-xl border border-surface-200 px-3 py-2 text-sm focus:border-accent-500"
+                  className="w-2/5 rounded-xl border border-surface-400 px-3 py-2 text-sm focus:border-accent-500"
                 />
                 <input
                   value={r.url}
                   onChange={(e) => setResource(i, { url: e.target.value })}
                   placeholder="https://..."
-                  className="min-w-0 flex-1 rounded-xl border border-surface-200 px-3 py-2 text-sm focus:border-accent-500"
+                  className="min-w-0 flex-1 rounded-xl border border-surface-400 px-3 py-2 text-sm focus:border-accent-500"
                 />
                 <button
                   type="button"

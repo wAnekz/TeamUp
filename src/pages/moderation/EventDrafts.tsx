@@ -193,7 +193,7 @@ function SourcesCard() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
           placeholder="@channel or t.me/channel"
-          className="min-w-0 flex-1 rounded-xl border border-surface-200 px-3 py-2 text-sm focus:border-accent-500"
+          className="min-w-0 flex-1 rounded-xl border border-surface-400 px-3 py-2 text-sm focus:border-accent-500"
         />
         <Button size="sm" variant="secondary" onClick={add} type="button">
           {tAll.common.add}

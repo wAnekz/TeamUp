@@ -180,7 +180,7 @@ export default function CreateProject() {
             <span className="mb-1.5 block text-sm font-medium text-surface-700">{t.type}</span>
             <select
               {...register('type')}
-              className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
+              className="w-full rounded-xl border border-surface-400 bg-white px-3.5 py-2.5 text-sm focus:border-accent-500"
             >
               <option value="ongoing">{t.typeOngoing}</option>
               <option value="event">{t.typeEvent}</option>

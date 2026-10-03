@@ -29,6 +29,7 @@ export function TagPicker<T extends string>({
             <button
               type="button"
               key={opt}
+              aria-pressed={active}
               onClick={() => onToggle(opt)}
               className={cn(
                 'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',

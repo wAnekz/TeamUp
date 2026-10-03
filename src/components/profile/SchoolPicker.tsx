@@ -135,7 +135,7 @@ export function SchoolPicker({
               }
             }}
             placeholder={isLoading ? t.loading : t.placeholder}
-            className="w-full rounded-xl border border-surface-200 bg-white py-2.5 pl-10 pr-3.5 text-sm text-surface-900 placeholder:text-surface-400 focus:border-accent-500"
+            className="w-full rounded-xl border border-surface-400 bg-white py-2.5 pl-10 pr-3.5 text-sm text-surface-900 placeholder:text-surface-400 focus:border-accent-500"
             autoComplete="off"
           />
           {value && (
@@ -189,7 +189,7 @@ export function SchoolPicker({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t.namePlaceholder}
-                className="w-full rounded-xl border border-surface-200 bg-white px-3.5 py-2 text-sm focus:border-accent-500"
+                className="w-full rounded-xl border border-surface-400 bg-white px-3.5 py-2 text-sm focus:border-accent-500"
               />
               <div className="relative">
                 <MapPin size={14} className="pointer-events-none absolute left-3 top-2.5 text-surface-400" />
@@ -197,7 +197,7 @@ export function SchoolPicker({
                   value={newCity}
                   onChange={(e) => setNewCity(e.target.value)}
                   placeholder={t.city}
-                  className="w-full rounded-xl border border-surface-200 bg-white py-2 pl-8 pr-3.5 text-sm focus:border-accent-500"
+                  className="w-full rounded-xl border border-surface-400 bg-white py-2 pl-8 pr-3.5 text-sm focus:border-accent-500"
                 />
               </div>
               {similarToNew.length > 0 && (

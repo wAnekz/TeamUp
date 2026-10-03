@@ -116,7 +116,7 @@ export default function ProjectDetail() {
               type="button"
               aria-label={tp.share}
               onClick={share}
-              className="rounded-lg border border-surface-200 p-2 text-surface-400 hover:bg-surface-100 hover:text-accent-600"
+              className="relative rounded-lg border border-surface-200 p-2 text-surface-400 after:absolute after:-inset-1.5 after:content-[''] hover:bg-surface-100 hover:text-accent-600"
             >
               <Share2 size={16} />
             </button>

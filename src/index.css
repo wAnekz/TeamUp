@@ -9,8 +9,9 @@
     --surface-100: 244 244 245;
     --surface-200: 228 228 231;
     --surface-300: 212 212 216;
-    --surface-400: 161 161 170;
-    --surface-500: 113 113 122;
+    /* 400/500 are text greys: >= 4.5:1 on white and surface-50..200 (WCAG 1.4.3). */
+    --surface-400: 111 111 119;
+    --surface-500: 96 96 105;
     --surface-600: 82 82 91;
     --surface-700: 63 63 70;
     --surface-800: 39 39 42;

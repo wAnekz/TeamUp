@@ -85,7 +85,7 @@ export function CategorizedTagPicker<T extends string>({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={searchPlaceholder ?? (kind === 'skill' ? t.picker.searchSkills : t.picker.searchInterests)}
-          className="w-full rounded-xl border border-surface-200 py-2 pl-9 pr-3 text-sm focus:border-accent-500"
+          className="w-full rounded-xl border border-surface-400 py-2 pl-9 pr-3 text-sm focus:border-accent-500"
         />
       </div>
 
@@ -97,6 +97,7 @@ export function CategorizedTagPicker<T extends string>({
             <div key={category} className="rounded-lg">
               <button
                 type="button"
+                aria-expanded={open}
                 onClick={() => toggleCategory(category)}
                 className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm font-medium text-surface-700 hover:bg-surface-50"
               >
@@ -114,6 +115,7 @@ export function CategorizedTagPicker<T extends string>({
                       <button
                         type="button"
                         key={opt}
+                        aria-pressed={active}
                         onClick={() => onToggle(opt)}
                         className={cn(
                           'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',

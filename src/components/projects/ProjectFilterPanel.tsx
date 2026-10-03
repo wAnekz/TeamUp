@@ -20,7 +20,7 @@ export function ProjectFilterPanel({
           value={filters.search ?? ''}
           onChange={(e) => onChange({ ...filters, search: e.target.value })}
           placeholder={t.feed.searchProjects}
-          className="w-full rounded-xl border border-surface-200 bg-surface-50 py-2.5 pl-9 pr-3 text-sm focus:border-accent-500"
+          className="w-full rounded-xl border border-surface-400 bg-surface-50 py-2.5 pl-9 pr-3 text-sm focus:border-accent-500"
         />
       </label>
 
