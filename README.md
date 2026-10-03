@@ -143,10 +143,11 @@ The userbase is 14–18, so this got more attention than a typical side project:
 
 ## Deploy, backups and rollback
 
-**Deploy order.** Rules and functions first, then the frontend (Netlify builds `main`):
+**Deploy order.** Rules and functions first, then the frontend. Netlify is not connected to git: pushing `main` publishes nothing, the site is deployed from a local build with the Netlify CLI (it bakes in the `VITE_*` values from `.env`):
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes,storage
 firebase deploy --only functions
+npm run build && netlify deploy --prod --dir=dist --message "<what>: $(git rev-parse --short HEAD)"
 ```
 The five callables (`acceptApplication`, `joinByInvite`, `inviteToProject`, `completeProfile`, `backfillXp`) run in `europe-west1` (`functions/src/region.ts`), the client calls them there (`src/lib/firebaseFunctions.ts`). To move a callable between regions without breaking open tabs: deploy it to both regions (`CALLABLE_REGIONS`), publish the frontend that calls the new region, then drop the old region from `CALLABLE_REGIONS` and run `firebase deploy --only functions:<name> --force` (the `--force` deletes the copy left in the old region).
 

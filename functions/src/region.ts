@@ -6,7 +6,6 @@
  */
 export const CALLABLE_REGION = 'europe-west1';
 
-// Transitional: the callables are also kept in their old us-central1 home so
-// tabs still running the previous build keep working until they reload.
-// Drop 'us-central1' once the new frontend is live (README "Deploy").
-export const CALLABLE_REGIONS = [CALLABLE_REGION, 'us-central1'];
+// While moving a callable to a new region, list the old one here too so tabs
+// on the previous build keep working (README "Deploy, backups and rollback").
+export const CALLABLE_REGIONS = [CALLABLE_REGION];
