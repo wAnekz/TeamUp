@@ -41,7 +41,7 @@ async function signUp(page, email, name) {
   step = `${name}: landing`;
   await page.goto(BASE + '/', { waitUntil: 'networkidle2' });
   await waitText(page, 'Найди команду');
-  await clickText(page, 'Начать');
+  await clickText(page, 'Создать аккаунт бесплатно');
   step = `${name}: sign up`;
   await page.waitForSelector('input[name="email"]');
   await type(page, 'input[name="email"]', email);
