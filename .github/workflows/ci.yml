@@ -104,16 +104,17 @@ jobs:
       VITE_FIREBASE_VAPID_KEY: ${{ secrets.VITE_FIREBASE_VAPID_KEY }}
       VITE_TELEGRAM_BOT_USERNAME: ${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
     steps:
-      # A build with a missing VITE_* value would ship a site that can't talk
-      # to Firebase, so any missing secret skips the deploy (with a warning)
-      # instead of publishing something broken.
+      # A build with a missing Firebase value would ship a site that can't
+      # talk to Firebase, so any missing secret skips the deploy (with a
+      # warning) instead of publishing something broken. The Telegram bot
+      # name is optional: without it the "Connect Telegram" row is hidden.
       - name: Check deploy secrets
         id: gate
         run: |
           missing=""
           for v in NETLIFY_AUTH_TOKEN VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID \
                    VITE_FIREBASE_STORAGE_BUCKET VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID \
-                   VITE_FIREBASE_VAPID_KEY VITE_TELEGRAM_BOT_USERNAME; do
+                   VITE_FIREBASE_VAPID_KEY; do
             [ -n "${!v}" ] || missing="$missing $v"
           done
           if [ -n "$missing" ]; then

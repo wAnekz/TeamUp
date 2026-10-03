@@ -143,7 +143,7 @@ The userbase is 14–18, so this got more attention than a typical side project:
 
 ## Deploy, backups and rollback
 
-**Deploy order.** Rules and functions first (by hand), then the frontend. Netlify is not connected to git; instead the `deploy` job in `.github/workflows/ci.yml` publishes every push to `main` once all checks (types, lint, unit, rules, e2e) are green. It builds from the commit with the `VITE_*` values stored as GitHub secrets, and skips itself with a warning while any of them is missing. One-time setup:
+**Deploy order.** Rules and functions first (by hand), then the frontend. Netlify is not connected to git; instead the `deploy` job in `.github/workflows/ci.yml` publishes every push to `main` once all checks (types, lint, unit, rules, e2e) are green. It builds from the commit with the `VITE_*` values stored as GitHub secrets, and skips itself with a warning while any Firebase value or the Netlify token is missing (`VITE_TELEGRAM_BOT_USERNAME` is optional and only hides the Telegram row). One-time setup:
 ```bash
 gh secret set -f <(grep -E '^VITE_(FIREBASE|TELEGRAM)_' .env)   # the VITE_* values
 gh secret set NETLIFY_AUTH_TOKEN   # personal access token from app.netlify.com/user/applications
