@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { TRIGGER_REGION } from './region';
 
 initializeApp();
 
@@ -46,7 +47,7 @@ async function enforceLimit(opts: {
 }
 
 // projects/{projectId}/messages/{messageId} — max 8 messages per 10s per user.
-export const rateLimitMessages = onDocumentCreated('projects/{projectId}/messages/{messageId}', async (event) => {
+export const rateLimitMessages = onDocumentCreated({ document: 'projects/{projectId}/messages/{messageId}', region: TRIGGER_REGION }, async (event) => {
   const data = event.data?.data();
   if (!data) return;
   await enforceLimit({
@@ -64,7 +65,7 @@ export const rateLimitMessages = onDocumentCreated('projects/{projectId}/message
 // reports/{reportId} — max 5 reports per 10 minutes per user (reports are
 // low-frequency by nature; this mainly stops report-spam used to harass
 // someone by flooding the moderation queue).
-export const rateLimitReports = onDocumentCreated('reports/{reportId}', async (event) => {
+export const rateLimitReports = onDocumentCreated({ document: 'reports/{reportId}', region: TRIGGER_REGION }, async (event) => {
   const data = event.data?.data();
   if (!data) return;
   await enforceLimit({
@@ -80,7 +81,7 @@ export const rateLimitReports = onDocumentCreated('reports/{reportId}', async (e
 });
 
 // applications/{applicationId} — max 15 applications per hour per user.
-export const rateLimitApplications = onDocumentCreated('applications/{applicationId}', async (event) => {
+export const rateLimitApplications = onDocumentCreated({ document: 'applications/{applicationId}', region: TRIGGER_REGION }, async (event) => {
   const data = event.data?.data();
   if (!data) return;
   await enforceLimit({

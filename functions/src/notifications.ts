@@ -7,6 +7,7 @@ import { defineSecret, defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
 import nodemailer from 'nodemailer';
 import { sendTelegram, TELEGRAM_BOT_TOKEN } from './telegram';
+import { TRIGGER_REGION } from './region';
 
 /**
  * Email notifications for the application flow:
@@ -143,7 +144,7 @@ export function emailShell(bodyHtml: string) {
 
 // applications/{applicationId} created → email the project owner.
 export const notifyNewApplication = onDocumentCreated(
-  { document: 'applications/{applicationId}', secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
+  { document: 'applications/{applicationId}', region: TRIGGER_REGION, secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
   async (event) => {
     const application = event.data?.data();
     if (!application) return;
@@ -198,7 +199,7 @@ export const notifyNewApplication = onDocumentCreated(
 // applications/{applicationId} updated → if status just flipped to
 // accepted/rejected, email the applicant.
 export const notifyApplicationDecision = onDocumentUpdated(
-  { document: 'applications/{applicationId}', secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
+  { document: 'applications/{applicationId}', region: TRIGGER_REGION, secrets: [GMAIL_APP_PASSWORD, TELEGRAM_BOT_TOKEN] },
   async (event) => {
     const before = event.data?.before.data();
     const after = event.data?.after.data();
@@ -267,7 +268,7 @@ export const notifyApplicationDecision = onDocumentUpdated(
 // `authorId` off the project doc rather than a separate query, since
 // Project already denormalizes the full team list for team-chat access
 // checks (see firestore.rules).
-export const notifyNewChatMessage = onDocumentCreated('projects/{projectId}/messages/{messageId}', async (event) => {
+export const notifyNewChatMessage = onDocumentCreated({ document: 'projects/{projectId}/messages/{messageId}', region: TRIGGER_REGION }, async (event) => {
   const message = event.data?.data();
   const projectId = event.params.projectId;
   if (!message) return;

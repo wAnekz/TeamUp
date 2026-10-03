@@ -9,3 +9,11 @@ export const CALLABLE_REGION = 'europe-west1';
 // While moving a callable to a new region, list the old one here too so tabs
 // on the previous build keep working (README "Deploy, backups and rollback").
 export const CALLABLE_REGIONS = [CALLABLE_REGION];
+
+/**
+ * Firestore triggers run next to the eur3 database. Older triggers were
+ * created before firebase-tools picked this region by default and stayed in
+ * us-central1 (a cross-region hop per event); naming the region pins them.
+ * Not used for the HTTP webhook (its URL would change) or schedules.
+ */
+export const TRIGGER_REGION = 'europe-west1';

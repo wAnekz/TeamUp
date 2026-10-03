@@ -3,6 +3,7 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
 import { sendEmail, emailShell, escapeHtml, GMAIL_APP_PASSWORD } from './notifications';
+import { TRIGGER_REGION } from './region';
 
 /**
  * `feedback/{feedbackId}` is write-only from the client (see
@@ -26,7 +27,7 @@ const GMAIL_USER = defineString('GMAIL_USER', { default: 'you@gmail.com' });
 const MAX_PER_HOUR = 3;
 
 export const notifyNewFeedback = onDocumentCreated(
-  { document: 'feedback/{feedbackId}', secrets: [GMAIL_APP_PASSWORD] },
+  { document: 'feedback/{feedbackId}', region: TRIGGER_REGION, secrets: [GMAIL_APP_PASSWORD] },
   async (event) => {
     const feedback = event.data?.data();
     if (!feedback) return;

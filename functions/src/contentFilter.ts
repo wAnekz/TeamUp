@@ -2,6 +2,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
+import { TRIGGER_REGION } from './region';
 
 /**
  * Automatic content screening for the two places students post free text
@@ -182,7 +183,7 @@ function truncate(text: string, max = 140): string {
 // ---------------- triggers ----------------
 
 export const screenNewProject = onDocumentCreated(
-  { document: 'projects/{projectId}', secrets: [GROQ_API_KEY] },
+  { document: 'projects/{projectId}', region: TRIGGER_REGION, secrets: [GROQ_API_KEY] },
   async (event) => {
     const data = event.data?.data();
     if (!data) return;
@@ -199,7 +200,7 @@ export const screenNewProject = onDocumentCreated(
 );
 
 export const screenLookingForTeamPost = onDocumentCreated(
-  { document: 'lookingForTeam/{postId}', secrets: [GROQ_API_KEY] },
+  { document: 'lookingForTeam/{postId}', region: TRIGGER_REGION, secrets: [GROQ_API_KEY] },
   async (event) => {
     const data = event.data?.data();
     if (!data) return;
