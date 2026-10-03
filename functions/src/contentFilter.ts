@@ -137,6 +137,44 @@ async function fileAutoReport(opts: {
   });
 }
 
+/**
+ * Each screen is a paid Groq call, and the triggers fire on every edit. A
+ * script rewriting a title in a loop would burn the quota, after which
+ * checkText fails open for everyone. Cap screens per author per hour; past
+ * the cap the text goes to moderators unscreened instead of silently live.
+ * One doc per author (reset each hour), so nothing piles up.
+ */
+const SCREENS_PER_HOUR = 20;
+
+/** Counts this screen; returns how many this author has used this hour. */
+async function countScreen(uid: string): Promise<number> {
+  const db = getFirestore();
+  const ref = db.doc(`screenQuota/${uid}`);
+  const hour = new Date().toISOString().slice(0, 13);
+  return db.runTransaction(async (tx) => {
+    const d = (await tx.get(ref)).data();
+    const n = d?.hour === hour ? (d.n ?? 0) + 1 : 1;
+    tx.set(ref, { hour, n });
+    return n;
+  });
+}
+
+/** Screens text unless the author is over quota; then flags it for a human. */
+async function screen(
+  authorId: string,
+  text: string,
+  target: { targetType: 'profile' | 'project'; targetId: string },
+): Promise<ModerationResult | null> {
+  if (!authorId) return checkText(text);
+  const n = await countScreen(authorId);
+  if (n <= SCREENS_PER_HOUR) return checkText(text);
+  // Report once per hour (the first edit past the cap), not on every edit.
+  if (n === SCREENS_PER_HOUR + 1) {
+    await fileAutoReport({ ...target, reason: `Over ${SCREENS_PER_HOUR} edits in an hour, text not screened: "${truncate(text)}"` });
+  }
+  return null;
+}
+
 function truncate(text: string, max = 140): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
@@ -149,8 +187,8 @@ export const screenNewProject = onDocumentCreated(
     const data = event.data?.data();
     if (!data) return;
     const text = [data.title, data.description].filter(Boolean).join('\n');
-    const moderation = await checkText(text);
-    if (!moderation.flagged) return;
+    const moderation = await screen(data.authorId, text, { targetType: 'project', targetId: event.params.projectId as string });
+    if (!moderation?.flagged) return;
 
     await fileAutoReport({
       targetType: 'project',
@@ -166,8 +204,8 @@ export const screenLookingForTeamPost = onDocumentCreated(
     const data = event.data?.data();
     if (!data) return;
     const text = [data.title, data.description].filter(Boolean).join('\n');
-    const moderation = await checkText(text);
-    if (!moderation.flagged) return;
+    const moderation = await screen(data.authorId, text, { targetType: 'profile', targetId: data.authorId });
+    if (!moderation?.flagged) return;
 
     // No dedicated moderation view for lookingForTeam posts yet — flag the
     // author's profile so it's at least visible in the queue; a moderator
@@ -189,8 +227,9 @@ export const screenEditedProject = onDocumentUpdated(
     const after = event.data?.after.data();
     if (!before || !after) return;
     if (before.title === after.title && before.description === after.description) return;
-    const moderation = await checkText([after.title, after.description].filter(Boolean).join('\n'));
-    if (!moderation.flagged) return;
+    const text = [after.title, after.description].filter(Boolean).join('\n');
+    const moderation = await screen(after.authorId, text, { targetType: 'project', targetId: event.params.projectId as string });
+    if (!moderation?.flagged) return;
 
     await fileAutoReport({
       targetType: 'project',
@@ -206,13 +245,36 @@ export const screenEditedLookingForTeamPost = onDocumentUpdated(
     const before = event.data?.before.data();
     const after = event.data?.after.data();
     if (!before || !after || before.description === after.description) return;
-    const moderation = await checkText(String(after.description ?? ''));
-    if (!moderation.flagged) return;
+    const moderation = await screen(after.authorId, String(after.description ?? ''), { targetType: 'profile', targetId: after.authorId });
+    if (!moderation?.flagged) return;
 
     await fileAutoReport({
       targetType: 'profile',
       targetId: after.authorId,
       reason: `"Looking for team" post edit auto-flagged (${moderation.categories.join(', ')}): "${truncate(String(after.description ?? ''))}"`,
+    });
+  },
+);
+
+// Name and bio are on every public profile, so they get the same screen.
+// Fires on every users/{uid} write (lastActiveAt on each visit too) but
+// returns before any Groq call unless the name or bio actually changed.
+export const screenEditedProfile = onDocumentUpdated(
+  { document: 'users/{uid}', secrets: [GROQ_API_KEY] },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.name === after.name && before.bio === after.bio) return;
+    const uid = event.params.uid as string;
+    const text = [after.name, after.bio].filter(Boolean).join('\n');
+    const moderation = await screen(uid, text, { targetType: 'profile', targetId: uid });
+    if (!moderation?.flagged) return;
+
+    await fileAutoReport({
+      targetType: 'profile',
+      targetId: uid,
+      reason: `Profile auto-flagged (${moderation.categories.join(', ')}): "${truncate(text)}"`,
     });
   },
 );

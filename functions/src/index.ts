@@ -2,7 +2,14 @@ export { rateLimitMessages, rateLimitReports, rateLimitApplications } from './mo
 export { notifyNewApplication, notifyApplicationDecision, notifyNewChatMessage } from './notifications';
 export { notifyNewFeedback } from './feedback';
 export { billingKillswitch } from './billingKillswitch';
-export { screenNewProject, screenLookingForTeamPost, screenEditedProject, screenEditedLookingForTeamPost } from './contentFilter';
+export {
+  screenNewProject,
+  screenLookingForTeamPost,
+  screenEditedProject,
+  screenEditedLookingForTeamPost,
+  screenEditedProfile,
+} from './contentFilter';
+export { cleanupDeletedProject } from './projectCleanup';
 export { autoArchiveProjects } from './autoArchive';
 export { telegramWebhook, weeklyTelegramDigest } from './telegram';
 export { joinByInvite, inviteToProject } from './invites';
