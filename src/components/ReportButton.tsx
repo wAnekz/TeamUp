@@ -56,7 +56,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
                 </label>
               ))}
             </div>
-            <Button className="w-full" onClick={submit} disabled={!reason} loading={isPending}>
+            <Button needsNetwork className="w-full" onClick={submit} disabled={!reason} loading={isPending}>
               {t.send}
             </Button>
           </div>

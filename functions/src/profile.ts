@@ -1,5 +1,6 @@
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { CALLABLE_REGIONS } from './region';
 
 /**
  * Finishes onboarding. The student saves their profile and contacts first
@@ -13,7 +14,7 @@ const int = (v: unknown, min: number, max: number) => typeof v === 'number' && N
 
 export function profileProblem(user: Record<string, unknown>, contacts: Record<string, unknown>): string | null {
   if (!str(user.name, 2, 60)) return 'name';
-  if (!int(user.age, 13, 19)) return 'age';
+  if (!int(user.age, 14, 19)) return 'age';
   if (!int(user.grade, 9, 12)) return 'grade';
   if (!str(user.city, 2, 60)) return 'city';
   if (!Array.isArray(user.skills) || user.skills.length === 0) return 'skills';
@@ -23,7 +24,7 @@ export function profileProblem(user: Record<string, unknown>, contacts: Record<s
   return null;
 }
 
-export const completeProfile = onCall(async (req) => {
+export const completeProfile = onCall({ region: CALLABLE_REGIONS }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Сначала войди в аккаунт.');
   const db = getFirestore();

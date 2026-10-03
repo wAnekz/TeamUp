@@ -34,9 +34,21 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache built static assets (JS/CSS/images/fonts). Firestore/Auth calls are
-        // never cached here — the app is offline-tolerant for the shell only.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Precache only the app shell (entry JS/CSS, React, Firebase, the
+        // Latin + Cyrillic fonts). Precaching every chunk meant ~1.8 MB in the
+        // background on a first visit over mobile data; page chunks are now
+        // cached the first time they're opened (runtimeCaching below).
+        // Firestore/Auth calls are never cached here.
+        globPatterns: [
+          'index.html',
+          'assets/index-*.{js,css}',
+          'assets/vendor-*.js',
+          'assets/firebase-*.js',
+          'assets/workbox-window*.js',
+          'assets/inter-{latin,latin-ext,cyrillic,cyrillic-ext}-wght-normal-*.woff2',
+          'icons/*.png',
+          'favicon.ico',
+        ],
         // Social-preview image: only crawlers need it, not worth precaching.
         globIgnores: ['og.png'],
         // Pulls the FCM background-message handler into this same service
@@ -52,6 +64,15 @@ export default defineConfig({
         clientsClaim: true,
         skipWaiting: true,
         runtimeCaching: [
+          {
+            // Hashed build output never changes, so cache-first is safe.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'teamup-chunks',
+              expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 60 },
+            },
+          },
           {
             urlPattern: ({ request }) => request.destination === 'image',
             handler: 'CacheFirst',

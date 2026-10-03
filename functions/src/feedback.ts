@@ -1,4 +1,4 @@
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineString } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
@@ -20,11 +20,27 @@ import { sendEmail, emailShell, escapeHtml, GMAIL_APP_PASSWORD } from './notific
 const ADMIN_EMAIL = defineString('ADMIN_EMAIL', { default: '' });
 const GMAIL_USER = defineString('GMAIL_USER', { default: 'you@gmail.com' });
 
+// Feedback mail shares the Gmail daily quota with every application and
+// invite email, so one script spamming feedback must not be able to burn it.
+// createdAt is server time (firestore.rules), so the window can't be dodged.
+const MAX_PER_HOUR = 3;
+
 export const notifyNewFeedback = onDocumentCreated(
   { document: 'feedback/{feedbackId}', secrets: [GMAIL_APP_PASSWORD] },
   async (event) => {
     const feedback = event.data?.data();
     if (!feedback) return;
+
+    const recent = await getFirestore()
+      .collection('feedback')
+      .where('reporterId', '==', feedback.reporterId)
+      .where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 60 * 60_000))
+      .count()
+      .get();
+    if (recent.data().count > MAX_PER_HOUR) {
+      logger.warn('notifyNewFeedback: rate-limited, no email sent', { reporterId: feedback.reporterId });
+      return;
+    }
 
     const to = ADMIN_EMAIL.value() || GMAIL_USER.value();
 

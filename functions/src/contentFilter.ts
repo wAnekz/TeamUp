@@ -1,5 +1,5 @@
 import { getFirestore } from 'firebase-admin/firestore';
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { logger } from 'firebase-functions/v2';
 
@@ -177,6 +177,42 @@ export const screenLookingForTeamPost = onDocumentCreated(
       targetType: 'profile',
       targetId: data.authorId,
       reason: `"Looking for team" post auto-flagged (${moderation.categories.join(', ')}): "${truncate(text)}"`,
+    });
+  },
+);
+// Edits go through the same screen: otherwise a clean post could be
+// created and then rewritten. Only runs when the screened text changed.
+export const screenEditedProject = onDocumentUpdated(
+  { document: 'projects/{projectId}', secrets: [GROQ_API_KEY] },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.title === after.title && before.description === after.description) return;
+    const moderation = await checkText([after.title, after.description].filter(Boolean).join('\n'));
+    if (!moderation.flagged) return;
+
+    await fileAutoReport({
+      targetType: 'project',
+      targetId: event.params.projectId as string,
+      reason: `Project edit auto-flagged (${moderation.categories.join(', ')})`,
+    });
+  },
+);
+
+export const screenEditedLookingForTeamPost = onDocumentUpdated(
+  { document: 'lookingForTeam/{postId}', secrets: [GROQ_API_KEY] },
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || before.description === after.description) return;
+    const moderation = await checkText(String(after.description ?? ''));
+    if (!moderation.flagged) return;
+
+    await fileAutoReport({
+      targetType: 'profile',
+      targetId: after.authorId,
+      reason: `"Looking for team" post edit auto-flagged (${moderation.categories.join(', ')}): "${truncate(String(after.description ?? ''))}"`,
     });
   },
 );

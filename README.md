@@ -39,7 +39,7 @@ A PWA that helps high school students (14–18) in Almaty find teammates for hac
 
 ## Tech stack
 
-React + TypeScript + Vite + Tailwind · Firebase (Auth, Firestore, Cloud Functions) · TanStack Query · React Hook Form + Zod · Framer Motion
+React + TypeScript + Vite + Tailwind · Firebase (Auth, Firestore, Cloud Functions) · TanStack Query · React Hook Form + Zod
 
 ## Getting started
 
@@ -130,8 +130,8 @@ Full rules live in `firestore.rules`; moderator workflow is documented in `docs/
 
 The userbase is 14–18, so this got more attention than a typical side project:
 
-- **Automated content screening** (`functions/src/contentFilter.ts`) - every new project and "looking for team" post runs through Groq's `openai/gpt-oss-safeguard-20b` before anyone has to notice and report it. It's a policy-reasoning model, not a fixed keyword list, given a plain-English policy that explicitly calls out `sexual_minors` alongside harassment/violence/self-harm/scam. Anything flagged lands in the same moderation queue as a user report - no separate UI to learn. Team chat is deliberately *not* screened (teammates already got accepted onto a project together; rate limits cover spam there instead).
-- **Rate limiting** (`functions/src/moderation.ts`) - client-side throttling only covers the well-behaved-app case. The actual backstop is three Cloud Functions that count how many docs a user created in a trailing window and delete the newest one if they're over the limit - this can't be expressed in Firestore rules alone, since rules have no concept of "how many docs has this user created recently."
+- **Automated content screening** (`functions/src/contentFilter.ts`) - every new or edited project and "looking for team" post runs through Groq's `openai/gpt-oss-safeguard-20b` before anyone has to notice and report it. It's a policy-reasoning model, not a fixed keyword list, given a plain-English policy that explicitly calls out `sexual_minors` alongside harassment/violence/self-harm/scam. Anything flagged lands in the same moderation queue as a user report - no separate UI to learn. Team chat is deliberately *not* screened (teammates already got accepted onto a project together; rate limits cover spam there instead).
+- **Rate limiting** (`functions/src/moderation.ts`) - client-side throttling only covers the well-behaved-app case. The actual backstop is three Cloud Functions that count how many docs a user created in a trailing window and delete the newest one if they're over the limit - this can't be expressed in Firestore rules alone, since rules have no concept of "how many docs has this user created recently." The rules do pin `createdAt` to server time on those collections, so the window can't be dodged with a back-dated timestamp. Feedback emails to the developer are capped at 3 per user per hour, since they share the Gmail daily quota with every notification.
 - **Manual moderation** - report queue + moderator role, documented for a non-technical moderator in `docs/MODERATION_GUIDE.md`. The automated screen is a first line of defense, not a replacement: it can't verify age or identity and won't catch a patient bad actor who never trips the policy.
 - **Auto-archive** (`functions/src/autoArchive.ts`) - daily job that archives event-type projects past their deadline, and any project (event or ongoing) untouched for 60 days, so the feed doesn't fill with dead posts.
 
@@ -140,6 +140,29 @@ The userbase is 14–18, so this got more attention than a typical side project:
 - No self-serve account deletion yet (manual request to the developer - see `PrivacyPolicy.tsx` §7)
 - Kazakh translations (`src/i18n/kz.ts`) were not written by a native speaker and need a proofread
 - The signed-in app was verified by type checks, unit tests and rules tests, not by an end-to-end browser test
+
+## Deploy, backups and rollback
+
+**Deploy order.** Rules and functions first, then the frontend (Netlify builds `main`):
+```bash
+firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only functions
+```
+The five callables (`acceptApplication`, `joinByInvite`, `inviteToProject`, `completeProfile`, `backfillXp`) run in `europe-west1` (`functions/src/region.ts`), the client calls them there (`src/lib/firebaseFunctions.ts`). To move a callable between regions without breaking open tabs: deploy it to both regions (`CALLABLE_REGIONS`), publish the frontend that calls the new region, then drop the old region from `CALLABLE_REGIONS` and run `firebase deploy --only functions:<name> --force` (the `--force` deletes the copy left in the old region).
+
+**Backups.** Firestore has delete protection, 7-day point-in-time recovery and a daily backup kept 14 days:
+```bash
+firebase firestore:databases:get "(default)"     # Delete Protection / Point In Time Recovery
+firebase firestore:backups:schedules:list
+firebase firestore:backups:list
+```
+Restore a backup into a **new** database and check it before pointing anything at it: `firebase firestore:databases:restore --database restore-check --backup <backup-name>`.
+
+**Rollback.**
+- Frontend: Netlify → Deploys → pick the previous deploy → *Publish deploy*.
+- Rules: `git checkout <good-sha> -- firestore.rules storage.rules && firebase deploy --only firestore:rules,storage`.
+- Functions: `git checkout <good-sha> -- functions && firebase deploy --only functions`.
+- Data: point-in-time recovery (last 7 days) or a daily backup, restored into a new database.
 
 ## Push notifications setup
 

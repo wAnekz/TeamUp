@@ -1,5 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
+import { useOnline } from '@/hooks/useOnline';
+import { useT } from '@/i18n';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -8,6 +10,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  /** Held while offline (see useOnline). Defaults to true for type="submit". */
+  needsNetwork?: boolean;
 }
 
 const variants: Record<Variant, string> = {
@@ -25,10 +29,15 @@ const sizes: Record<Size, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, disabled, children, ...props }, ref) => (
+  ({ className, variant = 'primary', size = 'md', loading, disabled, needsNetwork, children, ...props }, ref) => {
+    const online = useOnline();
+    const t = useT();
+    const offlineHold = (needsNetwork ?? props.type === 'submit') && !online;
+    return (
     <button
       ref={ref}
-      disabled={disabled || loading}
+      disabled={disabled || loading || offlineHold}
+      title={offlineHold ? t.common.offline : props.title}
       className={cn(
         'inline-flex items-center justify-center gap-2 font-medium transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none',
         variants[variant],
@@ -42,6 +51,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       )}
       {children}
     </button>
-  ),
+    );
+  },
 );
 Button.displayName = 'Button';

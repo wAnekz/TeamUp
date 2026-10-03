@@ -7,6 +7,7 @@ import { useProjectChat, sendProjectMessage } from '@/hooks/useChat';
 import { blockUser, unblockUser, useBlockedUserIds } from '@/hooks/useBlockedUsers';
 import { cn } from '@/utils/cn';
 import { useT } from '@/i18n';
+import { useOnline } from '@/hooks/useOnline';
 
 const MAX_LENGTH = 1000;
 
@@ -19,6 +20,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
   const { user, profile } = useAuth();
   const t = useT().chat;
   const { messages: allMessages, loading, error } = useProjectChat(projectId, enabled);
+  const online = useOnline();
   const blockedIds = useBlockedUserIds();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -58,7 +60,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
 
   const send = async () => {
     const trimmed = text.trim();
-    if (!trimmed || !user || !profile || sending) return;
+    if (!trimmed || !user || !profile || sending || !online) return;
     if (Date.now() - lastSentAtRef.current < MIN_INTERVAL_MS) return;
     setSending(true);
     setSendError(false);
@@ -169,7 +171,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
           <button
             type="button"
             onClick={send}
-            disabled={!text.trim() || sending}
+            disabled={!text.trim() || sending || !online}
             aria-label={t.send}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-600 text-white disabled:opacity-40"
           >

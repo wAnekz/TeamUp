@@ -41,6 +41,21 @@ service cloud.firestore {
       return !(key in d) || d[key] == null || isHttpUrl(d[key]);
     }
 
+    // Denormalized display name / photo (authorName, applicantName, …) must
+    // be the writer's own, so nobody can post under someone else's name.
+    function isMyName(v) {
+      return v == myProfile().name;
+    }
+    function isMyAvatar(v) {
+      return v == null || v == myProfile().get('avatarUrl', null);
+    }
+
+    // Rate limits in functions/src/moderation.ts count createdAt in a time
+    // window, so it must be the server's clock, not a client-chosen value.
+    function isServerCreatedAt() {
+      return request.resource.data.createdAt == request.time;
+    }
+
     function isModerator() {
       return isSignedIn()
         && exists(/databases/$(database)/documents/config/moderators)
@@ -65,6 +80,7 @@ service cloud.firestore {
         && request.resource.data.get('profileComplete', false) == false
         && isOptionalUrl(request.resource.data, 'avatarUrl');
       allow update: if (isOwner(userId)
+        && isNotBanned()
         && request.resource.data.uid == userId
         && !('email' in request.resource.data)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['banned', 'verified', 'isStudentConfirmed', 'profileComplete'])
@@ -182,15 +198,32 @@ service cloud.firestore {
         // joinByInvite) ever adds anyone to it.
         && request.resource.data.get('members', []).size() == 0
         && !('memberRoles' in request.resource.data)
+        && isMyName(request.resource.data.authorName)
+        && isMyAvatar(request.resource.data.get('authorAvatarUrl', null))
+        && isServerCreatedAt()
+        && validText()
         && validResult();
 
       allow update: if (isOwner(resource.data.authorId)
           && isNotBanned()
           && request.resource.data.authorId == resource.data.authorId
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['members', 'memberRoles'])
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['members', 'memberRoles', 'createdAt', 'viewCount'])
+          // A profile rename may flow into the project, but only to your own name.
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorName']) || isMyName(request.resource.data.authorName))
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorAvatarUrl']) || isMyAvatar(request.resource.data.authorAvatarUrl))
+          && validText()
           && validResult())
         || isViewCountIncrement();
       allow delete: if isOwner(resource.data.authorId) || isModerator();
+
+      // Same limits as projectSchema; drafts may still be missing fields.
+      function validText() {
+        let d = request.resource.data;
+        return (!('title' in d) || (d.title is string && d.title.size() <= 80))
+          && (!('description' in d) || (d.description is string && d.description.size() <= 500))
+          && (!('additionalRequirements' in d) || d.additionalRequirements == null
+              || (d.additionalRequirements is string && d.additionalRequirements.size() <= 300));
+      }
 
       function validResult() {
         let r = request.resource.data.get('result', null);
@@ -199,7 +232,7 @@ service cloud.firestore {
 
       function isViewCountIncrement() {
         return isSignedIn()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount', 'updatedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
           && request.resource.data.viewCount == resource.data.viewCount + 1;
       }
 
@@ -216,8 +249,12 @@ service cloud.firestore {
         allow read: if isTeamMember();
         allow create: if isTeamMember()
           && isNotBanned()
+          && request.resource.data.keys().hasOnly(['projectId', 'authorId', 'authorName', 'authorAvatarUrl', 'text', 'createdAt'])
           && request.resource.data.authorId == request.auth.uid
           && request.resource.data.projectId == projectId
+          && isMyName(request.resource.data.authorName)
+          && isMyAvatar(request.resource.data.get('authorAvatarUrl', null))
+          && isServerCreatedAt()
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 1000;
@@ -240,6 +277,11 @@ service cloud.firestore {
         && request.resource.data.ownerId != request.auth.uid
         && request.resource.data.ownerId == get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.authorId
         && !('viaInvite' in request.resource.data) // set only by joinByInvite
+        && isMyName(request.resource.data.applicantName)
+        && isMyAvatar(request.resource.data.get('applicantAvatarUrl', null))
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 200
+        && isServerCreatedAt()
         && applicationId == request.resource.data.projectId + '_' + request.resource.data.roleId + '_' + request.resource.data.applicantId;
 
       // The project owner may reject a pending application. Accepting goes
@@ -257,10 +299,26 @@ service cloud.firestore {
     // ---------------- lookingForTeam ----------------
     match /lookingForTeam/{postId} {
       allow read: if isSignedIn();
-      allow create: if hasCompletedProfile() && isEmailVerified() && request.resource.data.authorId == request.auth.uid;
+      function validPost() {
+        let d = request.resource.data;
+        return d.description is string && d.description.size() <= 400
+          && (!('skills' in d) || d.skills.size() <= 30)
+          && (!('desiredCompetitions' in d) || d.desiredCompetitions.size() <= 20)
+          && (!('interests' in d) || d.interests.size() <= 30);
+      }
+      allow create: if hasCompletedProfile() && isEmailVerified()
+        && request.resource.data.authorId == request.auth.uid
+        && isMyName(request.resource.data.authorName)
+        && isMyAvatar(request.resource.data.get('authorAvatarUrl', null))
+        && isServerCreatedAt()
+        && validPost();
       allow update: if isOwner(resource.data.authorId)
         && isNotBanned()
-        && request.resource.data.authorId == resource.data.authorId;
+        && request.resource.data.authorId == resource.data.authorId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorName']) || isMyName(request.resource.data.authorName))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['authorAvatarUrl']) || isMyAvatar(request.resource.data.authorAvatarUrl))
+        && validPost();
       allow delete: if isOwner(resource.data.authorId);
     }
 
@@ -280,7 +338,8 @@ service cloud.firestore {
         && request.resource.data.reporterId == request.auth.uid
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0
-        && request.resource.data.message.size() <= 2000;
+        && request.resource.data.message.size() <= 2000
+        && isServerCreatedAt();
       allow update: if false;
       allow delete: if false;
     }
@@ -383,7 +442,10 @@ service cloud.firestore {
       allow read: if isModerator();
       allow create: if isSignedIn()
         && request.resource.data.reporterId == request.auth.uid
-        && request.resource.data.status == 'open';
+        && request.resource.data.status == 'open'
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 500
+        && isServerCreatedAt();
       allow update: if isModerator()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && request.resource.data.status == 'reviewed';

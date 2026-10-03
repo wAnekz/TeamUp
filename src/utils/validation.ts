@@ -8,7 +8,7 @@ import { normalizeHttpUrl } from '@/utils/safeUrl';
 export const profileSchema = z
   .object({
     name: z.string().min(2, 'nameShort').max(60),
-    age: z.coerce.number().int().min(13, 'age13').max(19, 'ageMax'),
+    age: z.coerce.number().int().min(14, 'age14').max(19, 'ageMax'),
     grade: z.coerce.number().int().min(9).max(12),
     city: z.string().min(2, 'cityRequired').max(60),
     school: z.string().max(100).optional().or(z.literal('')),

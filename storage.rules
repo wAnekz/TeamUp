@@ -4,12 +4,17 @@ rules_version = '2';
 // mirror src/hooks/useProfile.ts and src/hooks/useAchievements.ts.
 service firebase.storage {
   match /b/{bucket}/o {
+    // No SVG: it can carry script, and files open in a new tab.
+    function isRasterImage() {
+      return request.resource.contentType.matches('image/(png|jpeg|webp|gif|heic|heif)');
+    }
+
     match /avatars/{userId}/{fileName} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
         && request.resource.size < 1 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && isRasterImage();
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
@@ -18,7 +23,7 @@ service firebase.storage {
       allow create, update: if request.auth != null
         && request.auth.uid == userId
         && request.resource.size < 10 * 1024 * 1024
-        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
+        && (isRasterImage() || request.resource.contentType == 'application/pdf');
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
   }

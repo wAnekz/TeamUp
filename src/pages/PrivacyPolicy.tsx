@@ -72,7 +72,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
     {
       heading: '6. Кто видит ваши данные',
       list: [
-        '**Имя, город, класс, школа, аватар, био, навыки, интересы, достижения (включая прикреплённые файлы), команды, в которых вы состоите, уровень и значки** - видны всем зарегистрированным пользователям (профили открыты по замыслу сервиса).',
+        '**Имя, возраст, город, класс, школа, аватар, био, навыки, интересы, достижения (включая прикреплённые файлы), команды, в которых вы состоите, уровень и значки** - видны всем зарегистрированным пользователям (профили открыты по замыслу сервиса).',
         '**Посетители без аккаунта** видят только события, рейтинг школ (суммарные очки школ) и обезличенные карточки проектов — название, описание, роли, нужные навыки и итог команды, **без имён, фото и состава команды**. Профили им недоступны.',
         '**Контакты (телеграм и т.д.)** - видны только вам и тем, с кем вы в одной команде: лидеру и участникам общих проектов. Доступ открывается автоматически, когда вас принимают в команду (или вы принимаете кого-то), и закрывается, если общих команд больше нет.',
         '**Email** - виден только вам самим. Другим пользователям он не показывается и не передаётся через интерфейс.',
@@ -169,7 +169,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
     {
       heading: '6. Who sees your data',
       list: [
-        '**Name, city, grade, school, avatar, bio, skills, interests, achievements (including attached files), the teams you are on, level and badges** - visible to all registered users (profiles are open by design).',
+        '**Name, age, city, grade, school, avatar, bio, skills, interests, achievements (including attached files), the teams you are on, level and badges** - visible to all registered users (profiles are open by design).',
         '**Visitors without an account** only see events, the school leaderboard (school point totals) and anonymized project cards — title, description, roles, required skills and the team result, **with no names, photos or team members**. Profiles are not available to them.',
         '**Contacts (Telegram, etc.)** - visible only to you and the people you share a team with: the lead and members of any common project. Access opens automatically when you are accepted onto a team (or accept someone) and closes when you no longer share a team.',
         '**Email** - visible only to you. It is never shown to other users or exposed through the interface.',
@@ -268,7 +268,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
     {
       heading: '6. Деректеріңізді кім көреді',
       list: [
-        '**Аты-жөні, қала, сынып, мектеп, аватар, био, дағдылар, қызығушылықтар, жетістіктер (тіркелген файлдарды қоса), сіз мүше командалар, деңгей мен белгілер** - барлық тіркелген пайдаланушыларға көрінеді (профильдер қызметтің тұжырымдамасы бойынша ашық).',
+        '**Аты-жөні, жасы, қала, сынып, мектеп, аватар, био, дағдылар, қызығушылықтар, жетістіктер (тіркелген файлдарды қоса), сіз мүше командалар, деңгей мен белгілер** - барлық тіркелген пайдаланушыларға көрінеді (профильдер қызметтің тұжырымдамасы бойынша ашық).',
         '**Аккаунтсыз келушілер** тек іс-шараларды, мектептер рейтингін (мектептердің жиынтық ұпайлары) және иесіздендірілген жоба карточкаларын көреді — атауы, сипаттамасы, рөлдері, қажетті дағдылар және команда нәтижесі, **аттарсыз, фотосыз және команда құрамынсыз**. Профильдер оларға қолжетімсіз.',
         '**Байланыстар (telegram және т.б.)** - тек өзіңізге және сізбен бір командадағыларға көрінеді: ортақ жобалардың жетекшісі мен қатысушыларына. Сізді командаға қабылдағанда (немесе сіз біреуді қабылдағанда) қолжетімділік автоматты түрде ашылады, ал ортақ команда қалмаса жабылады.',
         '**Email** - тек өзіңізге көрінеді. Басқа пайдаланушыларға көрсетілмейді және интерфейс арқылы берілмейді.',
@@ -309,7 +309,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
   ],
 };
 
-const UPDATED_DATE = '01.10.2026';
+const UPDATED_DATE = '03.10.2026';
 
 const CONTENT: Record<Lang, LegalContent> = {
   ru: {

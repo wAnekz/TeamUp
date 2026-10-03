@@ -35,22 +35,40 @@ const guest = () => env.unauthenticatedContext().firestore();
 const as = (uid: string, verified = true) =>
   env.authenticatedContext(uid, { email_verified: verified, email: `${uid}@example.com` }).firestore();
 
-// The Firestore emulator can reset the very first connection right after it
-// reports "ready" (seen on macOS), so poke it until it answers.
-async function waitForFirestoreEmulator() {
-  const host = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080';
-  for (let i = 0; i < 20; i++) {
+// A chat message / team post as the real client writes them.
+const msg = (projectId: string, uid: string, extra: Record<string, unknown> = {}) => ({
+  projectId, authorId: uid, authorName: uid, authorAvatarUrl: null, text: 'hello', createdAt: serverTimestamp(), ...extra,
+});
+const post = (uid: string, extra: Record<string, unknown> = {}) => ({
+  authorId: uid, authorName: uid, authorAvatarUrl: null, description: 'Ищу команду на хакатон', skills: [], interests: [],
+  desiredCompetitions: [], active: true, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ...extra,
+});
+const longAgo = new Date('2020-01-01');
+
+// The emulators can reset the first connection right after they report
+// "ready" (seen on macOS), so probe both services until they answer.
+async function waitForEmulator(host: string, label: string) {
+  for (let i = 0; i < 40; i++) {
     try {
-      if ((await fetch(`http://${host}/`)).ok) return;
+      const res = await fetch(`http://${host}/`);
+      if (res.status >= 200 && res.status < 600) return;
     } catch {
       // not ready yet
     }
     await new Promise((r) => setTimeout(r, 500));
   }
+  throw new Error(`${label} emulator did not become ready on ${host}`);
 }
 
 beforeAll(async () => {
-  await waitForFirestoreEmulator();
+  process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
+  process.env.FIREBASE_STORAGE_EMULATOR_HOST ??= '127.0.0.1:9199';
+
+  await Promise.all([
+    waitForEmulator(process.env.FIRESTORE_EMULATOR_HOST, 'Firestore'),
+    waitForEmulator(process.env.FIREBASE_STORAGE_EMULATOR_HOST, 'Storage'),
+  ]);
+
   env = await initializeTestEnvironment({
     projectId: 'demo-teamup',
     firestore: { rules: readFileSync('firestore.rules', 'utf8') },
@@ -96,7 +114,7 @@ beforeEach(async () => {
     await setDoc(doc(db, 'xpEvents/accepted_x'), { uid: 'alice', points: 50 });
     await setDoc(doc(db, 'invites/CODE123456'), { projectId: 'p1', ownerId: 'alice', active: true });
     await setDoc(doc(db, 'eventDrafts/d1'), { title: 'Draft', status: 'pending' });
-    await setDoc(doc(db, 'lookingForTeam/l1'), { authorId: 'alice', active: true });
+    await setDoc(doc(db, 'lookingForTeam/l1'), { authorId: 'alice', authorName: 'alice', description: 'Ищу команду', active: true });
   });
 });
 
@@ -148,7 +166,8 @@ describe('private data', () => {
     await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), 'users/bob'), { banned: true }));
     await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { banned: false }));
     await assertFails(setDoc(doc(as('bob'), 'users/bob'), { banned: false }, { merge: true }));
-    await assertSucceeds(updateDoc(doc(as('bob'), 'users/bob'), { name: 'Bob B' }));
+    // Nor edit the rest of the profile (name, bio, avatar) while banned.
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob'), { name: 'Bob B' }));
     await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { uid: 'fresh', banned: false }));
     await assertSucceeds(setDoc(doc(as('fresh'), 'users/fresh'), { uid: 'fresh' }));
   });
@@ -212,15 +231,17 @@ describe('teams and applications', () => {
       ownerId: 'alice',
       status: 'pending',
       message: 'hi',
+      applicantName: 'bob',
+      createdAt: serverTimestamp(),
     };
     await assertFails(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), { ...app, viaInvite: true }));
     await assertSucceeds(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), app));
   });
 
   it('applying needs a verified email and a finished profile', async () => {
-    const app = { projectId: 'p1', roleId: 'r1', ownerId: 'alice', status: 'pending', message: 'hi' };
-    await assertFails(setDoc(doc(as('bob', false), 'applications/p1_r1_bob'), { ...app, applicantId: 'bob' }));
-    await assertFails(setDoc(doc(as('newbie'), 'applications/p1_r1_newbie'), { ...app, applicantId: 'newbie' }));
+    const app = { projectId: 'p1', roleId: 'r1', ownerId: 'alice', status: 'pending', message: 'hi', createdAt: serverTimestamp() };
+    await assertFails(setDoc(doc(as('bob', false), 'applications/p1_r1_bob'), { ...app, applicantId: 'bob', applicantName: 'bob' }));
+    await assertFails(setDoc(doc(as('newbie'), 'applications/p1_r1_newbie'), { ...app, applicantId: 'newbie', applicantName: 'newbie' }));
   });
 
   it('only a project owner can create an invite for it', async () => {
@@ -232,10 +253,10 @@ describe('teams and applications', () => {
 });
 
 describe('team membership (it unlocks contacts)', () => {
-  const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', ownerId: 'alice', status: 'pending', message: 'hi' };
+  const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', applicantName: 'bob', ownerId: 'alice', status: 'pending', message: 'hi', createdAt: serverTimestamp() };
 
   it('a new project cannot come with a prefilled team', async () => {
-    const p = { title: 'P2', authorId: 'bob', status: 'open', isDraft: false };
+    const p = { title: 'P2', authorId: 'bob', authorName: 'bob', status: 'open', isDraft: false, createdAt: serverTimestamp() };
     await assertFails(setDoc(doc(as('bob'), 'projects/p2'), { ...p, members: ['alice'] }));
     await assertSucceeds(setDoc(doc(as('bob'), 'projects/p2'), { ...p, members: [] }));
   });
@@ -261,7 +282,7 @@ describe('team membership (it unlocks contacts)', () => {
 });
 
 describe('applications and posts keep their owners', () => {
-  const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', ownerId: 'alice', status: 'pending', message: 'hi' };
+  const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', applicantName: 'bob', ownerId: 'alice', status: 'pending', message: 'hi', createdAt: serverTimestamp() };
 
   it('an application must go to the real project owner', async () => {
     await assertFails(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), { ...app, ownerId: 'carol' }));
@@ -306,20 +327,21 @@ describe('banned students cannot post anything', () => {
     await assertFails(setDoc(doc(as('mallory'), 'projects/pm2'), { title: 'x', authorId: 'mallory', status: 'open', members: [] }));
     await assertFails(
       setDoc(doc(as('mallory'), 'applications/p1_r1_mallory'), {
-        projectId: 'p1', roleId: 'r1', applicantId: 'mallory', ownerId: 'alice', status: 'pending', message: 'hi',
+        projectId: 'p1', roleId: 'r1', applicantId: 'mallory', applicantName: 'mallory', ownerId: 'alice', status: 'pending', message: 'hi',
+        createdAt: serverTimestamp(),
       }),
     );
     await assertFails(
-      setDoc(doc(as('mallory'), 'projects/pm/messages/m1'), { projectId: 'pm', authorId: 'mallory', text: 'hello' }),
+      setDoc(doc(as('mallory'), 'projects/pm/messages/m1'), msg('pm', 'mallory')),
     );
-    await assertFails(setDoc(doc(as('mallory'), 'lookingForTeam/lm'), { authorId: 'mallory', active: true }));
+    await assertFails(setDoc(doc(as('mallory'), 'lookingForTeam/lm'), post('mallory')));
     // …while the same writes work for someone in good standing.
-    await assertSucceeds(setDoc(doc(as('alice'), 'projects/p1/messages/m1'), { projectId: 'p1', authorId: 'alice', text: 'hello' }));
-    await assertSucceeds(setDoc(doc(as('bob'), 'lookingForTeam/lb'), { authorId: 'bob', active: true }));
+    await assertSucceeds(setDoc(doc(as('alice'), 'projects/p1/messages/m1'), msg('p1', 'alice')));
+    await assertSucceeds(setDoc(doc(as('bob'), 'lookingForTeam/lb'), post('bob')));
   });
 
   it('and cannot edit what they already published', async () => {
-    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'lookingForTeam/lm'), { authorId: 'mallory', active: false }));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'lookingForTeam/lm'), { ...post('mallory'), active: false }));
     await assertFails(updateDoc(doc(as('mallory'), 'projects/pm'), { title: 'spam' }));
     await assertFails(updateDoc(doc(as('mallory'), 'lookingForTeam/lm'), { active: true }));
   });
@@ -415,6 +437,76 @@ describe('telegram link tokens', () => {
     await assertSucceeds(setDoc(doc(as('bob'), `telegramLinks/${token}`), { uid: 'bob', createdAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('bob'), `telegramLinks/${'y'.repeat(24)}`), { uid: 'alice', createdAt: serverTimestamp() }));
     await assertFails(getDoc(doc(as('bob'), `telegramLinks/${token}`)));
+  });
+});
+
+describe('no posting under someone else’s name', () => {
+  it('chat messages', async () => {
+    await assertFails(setDoc(doc(as('alice'), 'projects/p1/messages/m1'), msg('p1', 'alice', { authorName: 'bob' })));
+    await assertFails(setDoc(doc(as('alice'), 'projects/p1/messages/m2'), msg('p1', 'alice', { authorAvatarUrl: 'https://evil.example/x.png' })));
+    await assertFails(setDoc(doc(as('alice'), 'projects/p1/messages/m3'), msg('p1', 'alice', { isSystem: true })));
+  });
+
+  it('applications', async () => {
+    const app = { projectId: 'p1', roleId: 'r1', applicantId: 'bob', ownerId: 'alice', status: 'pending', message: 'hi', createdAt: serverTimestamp() };
+    await assertFails(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), { ...app, applicantName: 'alice' }));
+    await assertFails(setDoc(doc(as('bob'), 'applications/p1_r1_bob'), { ...app, applicantName: 'bob', message: 'x'.repeat(201) }));
+  });
+
+  it('projects and team posts', async () => {
+    const p = { title: 'P2', authorId: 'bob', status: 'open', isDraft: false, createdAt: serverTimestamp() };
+    await assertFails(setDoc(doc(as('bob'), 'projects/p2'), { ...p, authorName: 'alice' }));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { authorName: 'bob' }));
+    await assertSucceeds(updateDoc(doc(as('alice'), 'projects/p1'), { authorName: 'alice' })); // profile rename flows in
+    await assertFails(setDoc(doc(as('bob'), 'lookingForTeam/lb'), post('bob', { authorName: 'alice' })));
+    await assertFails(updateDoc(doc(as('alice'), 'lookingForTeam/l1'), { authorName: 'bob' }));
+  });
+});
+
+describe('rate limits count server time, not the client’s', () => {
+  it('createdAt in the past is rejected everywhere the limits look', async () => {
+    await assertFails(setDoc(doc(as('alice'), 'projects/p1/messages/m1'), msg('p1', 'alice', { createdAt: longAgo })));
+    await assertFails(
+      setDoc(doc(as('bob'), 'applications/p1_r1_bob'), {
+        projectId: 'p1', roleId: 'r1', applicantId: 'bob', applicantName: 'bob', ownerId: 'alice', status: 'pending', message: 'hi', createdAt: longAgo,
+      }),
+    );
+    await assertFails(setDoc(doc(as('bob'), 'reports/r1'), { reporterId: 'bob', targetType: 'profile', targetId: 'alice', reason: 'spam', status: 'open', createdAt: longAgo }));
+    await assertSucceeds(
+      setDoc(doc(as('bob'), 'reports/r2'), { reporterId: 'bob', targetType: 'profile', targetId: 'alice', reason: 'spam', status: 'open', createdAt: serverTimestamp() }),
+    );
+    await assertFails(setDoc(doc(as('bob'), 'feedback/f1'), { reporterId: 'bob', message: 'bug', page: '/', createdAt: longAgo }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'feedback/f2'), { reporterId: 'bob', message: 'bug', page: '/', createdAt: serverTimestamp() }));
+  });
+});
+
+describe('feed order and size limits', () => {
+  it('the owner cannot move a project to the top of the feed', async () => {
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { createdAt: new Date('2030-01-01') }));
+    await assertFails(updateDoc(doc(as('alice'), 'lookingForTeam/l1'), { createdAt: new Date('2030-01-01') }));
+  });
+
+  it('a view bump changes the counter only', async () => {
+    await assertFails(updateDoc(doc(as('bob'), 'projects/p1'), { viewCount: 1, updatedAt: new Date('2030-01-01') }));
+    await assertFails(updateDoc(doc(as('alice'), 'projects/p1'), { viewCount: 500 }));
+  });
+
+  it('oversized text is rejected', async () => {
+    const p = { authorId: 'bob', authorName: 'bob', status: 'open', isDraft: false, createdAt: serverTimestamp() };
+    await assertFails(setDoc(doc(as('bob'), 'projects/p2'), { ...p, title: 'x'.repeat(81) }));
+    await assertFails(setDoc(doc(as('bob'), 'projects/p3'), { ...p, title: 'ok', description: 'x'.repeat(501) }));
+    await assertFails(setDoc(doc(as('bob'), 'lookingForTeam/lb'), post('bob', { description: 'x'.repeat(401) })));
+  });
+});
+
+describe('storage: avatars', () => {
+  const png = new Uint8Array([137, 80, 78, 71]);
+
+  it('raster images only, no SVG', async () => {
+    const bob = env.authenticatedContext('bob').storage();
+    await assertSucceeds(uploadBytes(ref(bob, 'avatars/bob/a.png'), png, { contentType: 'image/png' }));
+    await assertFails(uploadBytes(ref(bob, 'avatars/bob/a.svg'), png, { contentType: 'image/svg+xml' }));
+    await assertFails(uploadBytes(ref(bob, 'achievements/bob/a.svg'), png, { contentType: 'image/svg+xml' }));
   });
 });
 
