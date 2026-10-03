@@ -69,6 +69,25 @@ service cloud.firestore {
 
     // ---------------- users ----------------
     match /users/{userId} {
+      // Same limits as profileSchema (src/utils/validation.ts), otherwise a
+      // finished profile could be rewritten with a 1 MB name or age 30.
+      // Missing fields are fine: the signup doc starts with name '' and no
+      // age, and completeProfile enforces the minimums at onboarding.
+      // Skills/interests caps sit above the full option lists (53 / 65), so
+      // any real selection passes.
+      function validProfile(d) {
+        return (!('name' in d) || (d.name is string && d.name.size() <= 60
+                  && (d.get('profileComplete', false) != true || d.name.trim().size() >= 2)))
+          && (d.get('bio', null) == null || (d.bio is string && d.bio.size() <= 200))
+          && (d.get('city', null) == null || (d.city is string && d.city.size() <= 60))
+          && (d.get('school', null) == null || (d.school is string && d.school.size() <= 100))
+          && (d.get('schoolId', null) == null || (d.schoolId is string && d.schoolId.size() <= 200))
+          && (!('age' in d) || (d.age is int && d.age >= 14 && d.age <= 19))
+          && (!('grade' in d) || (d.grade is int && d.grade >= 9 && d.grade <= 12))
+          && (!('skills' in d) || (d.skills is list && d.skills.size() <= 60))
+          && (!('interests' in d) || (d.interests is list && d.interests.size() <= 70));
+      }
+
       allow read: if isSignedIn();
       // banned, verified, isStudentConfirmed and profileComplete are set by
       // moderators or the completeProfile function, never by the student.
@@ -78,13 +97,15 @@ service cloud.firestore {
         && request.resource.data.get('verified', false) == false
         && request.resource.data.get('isStudentConfirmed', false) == false
         && request.resource.data.get('profileComplete', false) == false
-        && isOptionalUrl(request.resource.data, 'avatarUrl');
+        && isOptionalUrl(request.resource.data, 'avatarUrl')
+        && validProfile(request.resource.data);
       allow update: if (isOwner(userId)
         && isNotBanned()
         && request.resource.data.uid == userId
         && !('email' in request.resource.data)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['banned', 'verified', 'isStudentConfirmed', 'profileComplete'])
         && isOptionalUrl(request.resource.data, 'avatarUrl')
+        && validProfile(request.resource.data)
         // Contacts moved to private/contacts: they may be removed from the
         // public profile (migration) but never added or changed here.
         && (!('contacts' in request.resource.data) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['contacts'])))

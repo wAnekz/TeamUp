@@ -322,6 +322,43 @@ describe('moderation-owned profile fields', () => {
   });
 });
 
+describe('profile fields stay within the form limits', () => {
+  const alice = () => doc(as('alice'), 'users/alice');
+
+  it('a finished profile cannot get an oversized, empty or fake-age identity', async () => {
+    await assertFails(updateDoc(alice(), { name: 'x'.repeat(61) }));
+    await assertFails(updateDoc(alice(), { name: ' ' }));
+    await assertFails(updateDoc(alice(), { age: 30 }));
+    await assertFails(updateDoc(alice(), { age: '16' }));
+    await assertFails(updateDoc(alice(), { grade: 13 }));
+    await assertFails(updateDoc(alice(), { bio: 'x'.repeat(201) }));
+    await assertFails(updateDoc(alice(), { city: 'x'.repeat(61) }));
+    await assertFails(updateDoc(alice(), { skills: Array.from({ length: 61 }, () => ({ skill: 'react', level: 'beginner' })) }));
+  });
+
+  it('real edits and the onboarding save keep working', async () => {
+    await assertSucceeds(updateDoc(alice(), { name: 'Алина', age: 16, grade: 10, bio: 'x'.repeat(200), updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(alice(), { bio: '', lastActiveAt: serverTimestamp() }));
+    // Exactly what CompleteProfile.tsx writes before calling completeProfile.
+    await assertSucceeds(
+      setDoc(
+        doc(as('newbie'), 'users/newbie'),
+        {
+          uid: 'newbie', name: 'Новичок', age: 15, grade: 9, city: 'Алматы', school: null, schoolId: null, bio: '',
+          skills: [{ skill: 'react', level: 'beginner' }], interests: ['ai'], updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('a new account cannot start with an oversized name', async () => {
+    const base = { uid: 'fresh', skills: [], interests: [], verified: false, isStudentConfirmed: false, profileComplete: false };
+    await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, name: 'x'.repeat(61) }));
+    await assertSucceeds(setDoc(doc(as('fresh'), 'users/fresh'), { ...base, name: '' }));
+  });
+});
+
 describe('banned students cannot post anything', () => {
   it('no projects, applications, chat messages or team posts', async () => {
     await assertFails(setDoc(doc(as('mallory'), 'projects/pm2'), { title: 'x', authorId: 'mallory', status: 'open', members: [] }));
