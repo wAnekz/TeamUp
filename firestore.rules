@@ -127,10 +127,14 @@ service cloud.firestore {
       // someone aim the bot's messages at another person's chat.
       // private/info.email is where notification emails go: only the
       // address the student actually signed in with.
+      // private/signup: which ?src= link brought the student (a short tag
+      // like "poster-165"), written once at signup and never changed.
       allow create: if isOwner(userId) && docId != 'telegram'
         && (docId != 'contacts' || (request.resource.data.keys().hasOnly(['contacts']) && validContacts()))
-        && (docId != 'info' || request.resource.data.email == request.auth.token.email);
+        && (docId != 'info' || request.resource.data.email == request.auth.token.email)
+        && (docId != 'signup' || validSignup());
       allow update: if isOwner(userId)
+        && docId != 'signup'
         && (docId != 'contacts' || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contacts']) && validContacts()))
         && (docId != 'info' || request.resource.data.email == request.auth.token.email)
         && (docId != 'telegram'
@@ -141,6 +145,15 @@ service cloud.firestore {
       function validContacts() {
         let portfolio = request.resource.data.contacts.get('portfolio', null);
         return portfolio == null || portfolio == '' || isHttpUrl(portfolio);
+      }
+
+      // Same format as normalizeSource in src/lib/signupSource.ts.
+      function validSignup() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['signupSource', 'createdAt'])
+          && d.signupSource is string
+          && d.signupSource.matches('^[a-z0-9_-]{1,40}$')
+          && d.createdAt == request.time;
       }
     }
 

@@ -30,6 +30,10 @@ export interface MetricsSnapshot {
   accepted7d: number;
   telegramLinked: number;
   eventInterests: number;
+  // Signups per ?src= tag (src/lib/signupSource.ts): all time and last 7 days.
+  // Optional: snapshots from before this field existed don't have it.
+  sources?: Record<string, number>;
+  sources7d?: Record<string, number>;
 }
 
 export const computeMetrics = onSchedule(
@@ -40,14 +44,29 @@ export const computeMetrics = onSchedule(
     const since = (days: number) => now - days * DAY;
     const ms = (t?: Timestamp) => t?.toMillis() ?? 0;
 
-    const [users, projects, applications, lft, telegram, subs] = await Promise.all([
+    const [users, projects, applications, lft, telegram, subs, signups] = await Promise.all([
       db.collection('users').select('profileComplete', 'createdAt', 'lastActiveAt').get(),
       db.collection('projects').where('isDraft', '==', false).select('authorId', 'members', 'status').get(),
       db.collection('applications').select('applicantId', 'status', 'createdAt', 'updatedAt').get(),
       db.collection('lookingForTeam').select('authorId').get(),
       db.collectionGroup('private').where('chatId', '>', 0).select().get(),
       db.collection('eventSubscriptions').count().get(),
+      // Needs the private.signupSource collection-group index (firestore.indexes.json).
+      // Until it's built, skip the sources instead of losing the whole snapshot.
+      db.collectionGroup('private').where('signupSource', '>=', '').select('signupSource', 'createdAt').get()
+        .catch((err) => {
+          logger.warn('computeMetrics: signup sources skipped', err);
+          return null;
+        }),
     ]);
+
+    const sources: Record<string, number> = {};
+    const sources7d: Record<string, number> = {};
+    for (const s of signups?.docs ?? []) {
+      const d = s.data() as { signupSource: string; createdAt?: Timestamp };
+      sources[d.signupSource] = (sources[d.signupSource] ?? 0) + 1;
+      if (ms(d.createdAt) > since(7)) sources7d[d.signupSource] = (sources7d[d.signupSource] ?? 0) + 1;
+    }
 
     const onTeam = new Set<string>();
     const acted = new Set<string>();
@@ -89,6 +108,8 @@ export const computeMetrics = onSchedule(
       accepted7d,
       telegramLinked: telegram.size,
       eventInterests: subs.data().count,
+      sources,
+      sources7d,
     };
 
     const ref = db.doc('config/metrics');

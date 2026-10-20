@@ -12,6 +12,7 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '@/lib/firebase';
 import { forgetPushTokenOnSignOut } from '@/lib/messaging';
+import { clearSignupSource, storedSignupSource } from '@/lib/signupSource';
 import type { UserProfile } from '@/types';
 import { AuthContext } from './useAuth';
 
@@ -108,6 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedAt: serverTimestamp(),
       });
       await setDoc(doc(db, 'users', uid, 'private', 'info'), { email });
+      // Which poster/post brought them (src/lib/signupSource.ts). Counted in
+      // computeMetrics; never blocks signup if it fails.
+      setDoc(doc(db, 'users', uid, 'private', 'signup'), {
+        signupSource: storedSignupSource(),
+        createdAt: serverTimestamp(),
+      })
+        .then(clearSignupSource)
+        .catch(() => {});
     }
   };
 

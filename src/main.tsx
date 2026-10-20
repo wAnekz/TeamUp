@@ -11,6 +11,7 @@ import { onForegroundPush } from '@/lib/messaging';
 import { toast } from '@/lib/toast';
 import App from './App';
 import { ensureLangLoaded } from '@/i18n';
+import { captureSignupSource } from '@/lib/signupSource';
 import './index.css';
 import '@fontsource-variable/inter';
 import '@/lib/theme';
@@ -19,6 +20,9 @@ import '@/lib/theme';
 // notification on their own — only background ones do, via
 // firebase-messaging-sw.js. Surface those as an in-app toast instead.
 onForegroundPush((title, body) => toast.info(body ? `${title}: ${body}` : title));
+
+// ?src=… from posters and posts: remember it until signup, strip it from the URL.
+captureSignupSource();
 
 // Without this, a new deploy's SW installs and (thanks to skipWaiting +
 // clientsClaim in vite.config) takes control of the page in the background —

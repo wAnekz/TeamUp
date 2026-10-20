@@ -171,6 +171,19 @@ describe('private data', () => {
     await assertFails(setDoc(doc(as('fresh'), 'users/fresh'), { uid: 'fresh', banned: false }));
     await assertSucceeds(setDoc(doc(as('fresh'), 'users/fresh'), { uid: 'fresh' }));
   });
+
+  it('signup source is a short tag, written once by the owner, read by nobody else', async () => {
+    const tag = (signupSource: unknown, extra: Record<string, unknown> = {}) => ({ signupSource, createdAt: serverTimestamp(), ...extra });
+    await assertFails(setDoc(doc(as('bob'), 'users/alice/private/signup'), tag('poster-165')));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('Poster 165')));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('x'.repeat(41))));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('poster-165', { name: 'Bob' })));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), { signupSource: 'poster-165', createdAt: longAgo }));
+    await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('poster-165')));
+    await assertFails(updateDoc(doc(as('bob'), 'users/bob/private/signup'), { signupSource: 'direct' }));
+    await assertFails(getDoc(doc(as('alice'), 'users/bob/private/signup')));
+    await assertSucceeds(getDoc(doc(as('bob'), 'users/bob/private/signup')));
+  });
 });
 
 describe('contacts', () => {

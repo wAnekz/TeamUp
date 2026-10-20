@@ -32,7 +32,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
         '**Данные профиля:** имя, возраст, класс, город, школа (по желанию, выбирается из общего справочника или добавляется вами), фото профиля, навыки, интересы, короткое био.',
         '**Контактные данные (по желанию):** телеграм, GitHub, портфолио, Instagram — вы указываете их сами. Они видны только вам и участникам ваших команд (см. п. 6).',
         '**Достижения (по желанию):** название, результат, дата, описание, ссылка и прикреплённый файл (фото диплома или PDF-сертификат). На файле может быть ваше ФИО и школа — загружайте только то, что готовы показать.',
-        '**Данные об активности:** время последнего входа, созданные проекты и их итоги, заявки, приглашения в команды, отметки «Мне интересно» у событий, сообщения в командных чатах, поданные жалобы.',
+        '**Данные об активности:** время последнего входа, созданные проекты и их итоги, заявки, приглашения в команды, отметки «Мне интересно» у событий, сообщения в командных чатах, поданные жалобы, короткая метка ссылки, по которой вы пришли (например, «poster» с постера). Метки мы смотрим только в виде общего количества.',
         '**Игровые данные:** очки опыта (XP), уровень и значки. Они начисляются автоматически за подтверждённые действия (например, когда вас приняли в команду) и используются для сезонного рейтинга школ.',
         '**Telegram (по желанию):** если вы подключите Telegram-бота в настройках, мы храним идентификатор чата и ваш username в Telegram, чтобы присылать туда уведомления. Отключить можно в настройках или командой /stop в боте.',
         '**Технические данные:** то, что автоматически собирают наши инфраструктурные провайдеры (см. п. 4), например IP-адрес при обращении к серверу.',
@@ -131,7 +131,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
         '**Profile data:** name, age, grade, city, school (optional; picked from a shared directory or added by you), profile photo, skills, interests, short bio.',
         '**Contact details (optional):** Telegram, GitHub, portfolio, Instagram — you provide these yourself. They are visible only to you and the people on your teams (see section 6).',
         '**Achievements (optional):** title, result, date, description, link and an attached file (a photo of a diploma or a PDF certificate). A file may show your full name and school — only upload what you are happy to show.',
-        '**Activity data:** last active time, created projects and their results, applications, team invites, "interested" marks on events, messages in team chats, submitted reports.',
+        '**Activity data:** last active time, created projects and their results, applications, team invites, "interested" marks on events, messages in team chats, submitted reports, and a short tag of the link you came from (for example "poster" from a poster). We only look at these tags as totals.',
         '**Game data:** experience points (XP), level and badges. Granted automatically for confirmed actions (e.g. being accepted onto a team) and used for the seasonal school leaderboard.',
         '**Telegram (optional):** if you connect the Telegram bot in Settings, we store your chat ID and Telegram username to send notifications there. Disconnect in Settings or with /stop in the bot.',
         '**Technical data:** whatever our infrastructure providers automatically collect (see section 4), e.g. IP address when contacting the server.',
@@ -228,7 +228,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
         '**Профиль деректері:** аты-жөні, жасы, сынып, қала, мектеп (қалауыңызша; ортақ анықтамалықтан таңдалады немесе өзіңіз қосасыз), профиль фотосы, дағдылар, қызығушылықтар, қысқаша био.',
         '**Байланыс деректері (қалауыңызша):** telegram, GitHub, портфолио, Instagram — оларды өзіңіз көрсетесіз. Олар тек өзіңізге және командаларыңыздың мүшелеріне көрінеді (6-бөлімді қараңыз).',
         '**Жетістіктер (қалауыңызша):** атауы, нәтижесі, күні, сипаттамасы, сілтеме және тіркелген файл (диплом фотосы немесе PDF-сертификат). Файлда аты-жөніңіз бен мектебіңіз болуы мүмкін — көрсетуге дайын нәрсені ғана жүктеңіз.',
-        '**Белсенділік деректері:** соңғы кіру уақыты, құрылған жобалар мен олардың нәтижелері, өтінімдер, командаға шақырулар, іс-шаралардағы «Маған қызық» белгілері, команда чатындағы хабарламалар, жіберілген шағымдар.',
+        '**Белсенділік деректері:** соңғы кіру уақыты, құрылған жобалар мен олардың нәтижелері, өтінімдер, командаға шақырулар, іс-шаралардағы «Маған қызық» белгілері, команда чатындағы хабарламалар, жіберілген шағымдар, сіз келген сілтеменің қысқа белгісі (мысалы, постерден «poster»). Бұл белгілерді тек жалпы сан ретінде қараймыз.',
         '**Ойын деректері:** тәжірибе ұпайлары (XP), деңгей және белгілер. Расталған әрекеттер үшін автоматты түрде беріледі (мысалы, сізді командаға қабылдағанда) және мектептердің маусымдық рейтингінде қолданылады.',
         '**Telegram (қалауыңызша):** баптауларда Telegram-ботты қоссаңыз, хабарлама жіберу үшін чат идентификаторы мен Telegram username-іңізді сақтаймыз. Баптауларда немесе боттағы /stop командасымен ажыратуға болады.',
         '**Техникалық деректер:** біздің инфрақұрылым провайдерлері автоматты түрде жинайтын деректер (4-бөлімді қараңыз), мысалы, серверге жүгінгендегі IP-мекенжай.',
@@ -309,7 +309,7 @@ const SECTIONS: Record<Lang, LegalSection[]> = {
   ],
 };
 
-const UPDATED_DATE = '03.10.2026';
+const UPDATED_DATE = '20.10.2026';
 
 const CONTENT: Record<Lang, LegalContent> = {
   ru: {

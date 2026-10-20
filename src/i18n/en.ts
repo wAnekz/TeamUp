@@ -713,6 +713,9 @@ export const en = {
     interests: '"Interested" marks',
     trend: 'Weekly active, last 30 days',
     updated: (d: string) => `Updated ${d}`,
+    sources: 'Where signups come from',
+    sourcesHint: 'Tag from the ?src= link on a poster or post. "direct" means no tag.',
+    sourcesWeek: (n: number) => `+${n} this week`,
     link: 'Stats',
   },
   moderation: {

@@ -25,6 +25,8 @@ interface Snapshot {
   accepted7d: number;
   telegramLinked: number;
   eventInterests: number;
+  sources?: Record<string, number>;
+  sources7d?: Record<string, number>;
 }
 
 function useMetrics(enabled: boolean) {
@@ -66,6 +68,9 @@ export default function Stats() {
     : [];
   const history = data?.history ?? [];
   const maxActive = Math.max(1, ...history.map((h) => h.active7d));
+  // Where signups came from (?src= links on posters and posts), biggest first.
+  const sources = Object.entries(m?.sources ?? {}).sort((a, b) => b[1] - a[1]);
+  const totalSources = sources.reduce((sum, [, n]) => sum + n, 0);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -141,6 +146,29 @@ export default function Stats() {
               ))}
             </div>
           </Card>
+
+          {sources.length > 0 && (
+            <Card>
+              <p className="text-sm font-medium text-surface-700">{t.sources}</p>
+              <p className="mb-3 mt-0.5 text-xs text-surface-500">{t.sourcesHint}</p>
+              <div className="space-y-2">
+                {sources.map(([src, n]) => (
+                  <div key={src}>
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="truncate font-mono text-surface-700">{src}</span>
+                      <span className="shrink-0 tabular-nums text-surface-900">
+                        <strong>{n}</strong>
+                        <span className="ml-2 text-xs text-surface-500">{t.sourcesWeek(m.sources7d?.[src] ?? 0)}</span>
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-surface-100">
+                      <div className="h-full rounded-full bg-accent-600" style={{ width: `${pct(n, totalSources)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {history.length > 1 && (
             <Card>
