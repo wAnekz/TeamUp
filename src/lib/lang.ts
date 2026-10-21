@@ -3,8 +3,8 @@ import { useSyncExternalStore } from 'react';
 /**
  * UI language for the whole app. Russian by default (most of the audience);
  * Kazakh and English available from the switcher on the landing/login
- * pages and in Settings. One shared, remembered choice (localStorage) so it
- * carries from landing → sign-up → the app. Strings live in src/i18n/.
+ * pages and in Settings, or from a ?lang= link. One shared, remembered choice
+ * (localStorage) so it carries from landing → sign-up → the app. Strings live in src/i18n/.
  */
 
 export type Lang = 'ru' | 'en' | 'kz';
@@ -17,6 +17,21 @@ const KEY = 'teamup:lang';
 const listeners = new Set<() => void>();
 
 function read(): Lang {
+  // A ?lang=en|kz|ru link (e.g. shared in a CV or a post) wins and is
+  // remembered, so the visitor stays in that language after sign-up.
+  try {
+    const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('lang') : null;
+    if (q === 'ru' || q === 'en' || q === 'kz') {
+      try {
+        localStorage.setItem(KEY, q);
+      } catch {
+        // storage blocked: still use it for this visit
+      }
+      return q;
+    }
+  } catch {
+    // malformed URL: ignore
+  }
   try {
     const v = localStorage.getItem(KEY);
     if (v === 'ru' || v === 'en' || v === 'kz') return v;
