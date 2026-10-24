@@ -5,7 +5,9 @@
 // shows counts per source, never who came from where.
 const KEY = 'teamup:src';
 const PARAMS = ['src', 'utm_source'];
-const VALID = /^[a-z0-9_-]{1,40}$/;
+// Starts with a letter/digit: a tag becomes a map key in config/metrics, and
+// Firestore reserves field names like __x__.
+const VALID = /^[a-z0-9][a-z0-9_-]{0,39}$/;
 
 export function normalizeSource(raw: string | null | undefined): string | null {
   if (!raw) return null;

@@ -14,6 +14,8 @@ import { logger } from 'firebase-functions/v2';
 
 const DAY = 24 * 60 * 60 * 1000;
 const HISTORY_DAYS = 30;
+// Same format as normalizeSource in src/lib/signupSource.ts and firestore.rules.
+const VALID_SOURCE = /^[a-z0-9][a-z0-9_-]{0,39}$/;
 
 export interface MetricsSnapshot {
   date: string; // yyyy-mm-dd, Almaty
@@ -63,7 +65,12 @@ export const computeMetrics = onSchedule(
     const sources: Record<string, number> = {};
     const sources7d: Record<string, number> = {};
     for (const s of signups?.docs ?? []) {
-      const d = s.data() as { signupSource: string; createdAt?: Timestamp };
+      // Only private/signup counts, and only tags the rules accept: anything
+      // else (older stray docs) would skew the numbers or, as a __x__ map key,
+      // fail the whole write below.
+      if (s.ref.id !== 'signup') continue;
+      const d = s.data() as { signupSource: unknown; createdAt?: Timestamp };
+      if (typeof d.signupSource !== 'string' || !VALID_SOURCE.test(d.signupSource)) continue;
       sources[d.signupSource] = (sources[d.signupSource] ?? 0) + 1;
       if (ms(d.createdAt) > since(7)) sources7d[d.signupSource] = (sources7d[d.signupSource] ?? 0) + 1;
     }
@@ -114,7 +121,17 @@ export const computeMetrics = onSchedule(
 
     const ref = db.doc('config/metrics');
     const history = ((await ref.get()).data()?.history ?? []) as MetricsSnapshot[];
-    const nextHistory = [...history.filter((h) => h.date !== snapshot.date), snapshot].slice(-HISTORY_DAYS);
+    // Sources live only in `current` (Stats reads them there): one map per
+    // day in history would grow the doc with every new tag.
+    const withoutSources = (h: MetricsSnapshot): MetricsSnapshot => {
+      const copy = { ...h };
+      delete copy.sources;
+      delete copy.sources7d;
+      return copy;
+    };
+    const nextHistory = [...history.filter((h) => h.date !== snapshot.date), snapshot]
+      .map(withoutSources)
+      .slice(-HISTORY_DAYS);
     await ref.set({ current: snapshot, history: nextHistory, updatedAt: Timestamp.now() });
     logger.info('computeMetrics', snapshot);
   },

@@ -14,5 +14,8 @@ describe('normalizeSource', () => {
     expect(normalizeSource('постер')).toBeNull();
     expect(normalizeSource('a/b')).toBeNull();
     expect(normalizeSource('x'.repeat(41))).toBeNull();
+    // Would be a reserved Firestore field name as a key in config/metrics.
+    expect(normalizeSource('__x__')).toBeNull();
+    expect(normalizeSource('-a')).toBeNull();
   });
 });

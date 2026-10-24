@@ -177,6 +177,10 @@ describe('private data', () => {
     await assertFails(setDoc(doc(as('bob'), 'users/alice/private/signup'), tag('poster-165')));
     await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('Poster 165')));
     await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('x'.repeat(41))));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('__x__')));
+    // Any other private doc id would dodge validSignup() and still be counted.
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/fake'), tag('anything goes')));
+    await assertFails(setDoc(doc(as('bob'), 'users/bob/private/engagement'), { lastNudgeAt: serverTimestamp() }));
     await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('poster-165', { name: 'Bob' })));
     await assertFails(setDoc(doc(as('bob'), 'users/bob/private/signup'), { signupSource: 'poster-165', createdAt: longAgo }));
     await assertSucceeds(setDoc(doc(as('bob'), 'users/bob/private/signup'), tag('poster-165')));
