@@ -198,6 +198,7 @@ export default function Login() {
           <Input
             label={t.email}
             type="email"
+            autoComplete="email"
             placeholder="you@school.kz"
             {...register('email')}
             error={errors.email ? t.invalidEmail : undefined}

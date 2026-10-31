@@ -30,6 +30,14 @@ export const kz: Dict = {
     somethingWrong: 'Бірдеңе дұрыс болмады. Қайталап көр.',
     notSignedIn: 'Аккаунтқа кіру керек',
   },
+  pageTitle: {
+    home: 'TeamUp - хакатондар мен олимпиадаларға команда тап',
+    login: 'Кіру',
+    completeProfile: 'Профильді толтыр',
+    invite: 'Командаға шақыру',
+    user: 'Профиль',
+    terms: 'Пайдалану шарттары',
+  },
   nav: {
     projects: 'Жобалар',
     events: 'Іс-шаралар',
@@ -127,6 +135,7 @@ export const kz: Dict = {
     noSaved: 'Таңдаулылар әзірге бос. Жобаны сақтау үшін жұлдызшаны бас.',
     searchProjects: 'Жобаларды іздеу...',
     openSlotsOnly: 'Тек бос орыны барлар',
+    filters: 'Сүзгілер',
     skills: 'Дағдылар',
     interests: 'Қызығушылықтар',
   },

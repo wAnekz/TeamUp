@@ -325,7 +325,9 @@ export default function Home() {
 
       {/* Schools + portfolio: two different tiles, not twin cards. */}
       <section className="grid gap-4 lg:grid-cols-[2fr_3fr]">
-        <div className="rounded-3xl border border-surface-200 bg-white p-6 sm:p-8">
+        {/* min-w-0: a grid item defaults to min-width:auto, so a long school
+            name in the truncated list below widened the page past 320px. */}
+        <div className="min-w-0 rounded-3xl border border-surface-200 bg-white p-6 sm:p-8">
           <p className="flex items-center gap-2 font-semibold text-surface-900">
             <Trophy size={18} aria-hidden className="text-accent-600" /> {t.leaderboard} · {formatSeason(currentSeason())}
           </p>

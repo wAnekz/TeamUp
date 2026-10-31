@@ -11,6 +11,7 @@ import { TeamResultCard } from '@/components/projects/TeamResultCard';
 import { SuggestedTeammates } from '@/components/projects/SuggestedTeammates';
 import { LevelPill } from '@/components/gamification/Gamification';
 import { useAuthGate } from '@/hooks/useAuthGate';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { interestLabel, skillLabel, useT } from '@/i18n';
 import { useApplyToRole, useProjectApplications, useReviewApplication } from '@/hooks/useApplications';
 import { useDeleteProject, useIncrementProjectView, useProject, useUpdateProject } from '@/hooks/useProjects';
@@ -33,6 +34,7 @@ export default function ProjectDetail() {
   const t = useT();
   const tp = t.project;
   const { data: project, isLoading, refetch } = useProject(id, isGuest);
+  usePageTitle(project?.title ?? (isLoading ? undefined : t.errors.notFound));
   const [applyRole, setApplyRole] = useState<ProjectRole | null>(null);
 
   const applyMutation = useApplyToRole();

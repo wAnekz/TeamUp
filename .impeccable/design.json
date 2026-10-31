@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T13:00:00Z",
+  "title": "Design System: TeamUp",
+  "extensions": {
+    "colorMeta": {
+      "indigo-signal": {
+        "role": "primary",
+        "displayName": "Indigo Signal",
+        "canonical": "#4F46E5",
+        "tonalRamp": [
+          "#312E81",
+          "#3730A3",
+          "#4338CA",
+          "#4F46E5",
+          "#6366F1",
+          "#818CF8",
+          "#C7D2FE",
+          "#EEF2FF"
+        ]
+      },
+      "indigo-signal-deep": {
+        "role": "primary",
+        "displayName": "Indigo Signal Deep",
+        "canonical": "#4338CA"
+      },
+      "indigo-signal-pressed": {
+        "role": "primary",
+        "displayName": "Indigo Signal Pressed",
+        "canonical": "#3730A3"
+      },
+      "indigo-mist": {
+        "role": "primary",
+        "displayName": "Indigo Mist",
+        "canonical": "#EEF2FF"
+      },
+      "indigo-haze": {
+        "role": "primary",
+        "displayName": "Indigo Haze",
+        "canonical": "#E0E7FF"
+      },
+      "indigo-focus": {
+        "role": "primary",
+        "displayName": "Indigo Focus",
+        "canonical": "#6366F1"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "rgb(250 250 250)",
+        "tonalRamp": [
+          "#18181B",
+          "#27272A",
+          "#3F3F46",
+          "#525259",
+          "#606069",
+          "#6F6F77",
+          "#E4E4E7",
+          "#FAFAFA"
+        ]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#FFFFFF"
+      },
+      "chalk": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "rgb(244 244 245)"
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgb(228 228 231)"
+      },
+      "field-stroke": {
+        "role": "neutral",
+        "displayName": "Field Stroke",
+        "canonical": "rgb(111 111 119)"
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "rgb(96 96 105)"
+      },
+      "soft-ink": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "rgb(63 63 70)"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "rgb(24 24 27)"
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Night",
+        "canonical": "rgb(11 11 15)"
+      },
+      "night-card": {
+        "role": "neutral",
+        "displayName": "Night Card",
+        "canonical": "rgb(20 20 25)"
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Success",
+        "canonical": "#047857"
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Danger",
+        "canonical": "#DC2626"
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Warning",
+        "canonical": "#B45309"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero лендинга, 34px → 48px → 52px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Заголовки секций лендинга, 30px → 36px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Названия карточек и заголовки страниц приложения."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Основной текст интерфейса."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Бейджи, подсказки, ошибки, мета."
+      },
+      "label-small": {
+        "displayName": "Label Small",
+        "purpose": "11px: подписи нижней навигации, мета в карточке, время в чате, бейджи XP. Минимальный размер."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft",
+        "value": "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 2px 8px -2px rgb(0 0 0 / 0.06)",
+        "purpose": "Главная кнопка и CTA регистрации."
+      },
+      {
+        "name": "card",
+        "value": "0 1px 3px 0 rgb(0 0 0 / 0.05), 0 4px 16px -4px rgb(0 0 0 / 0.08)",
+        "purpose": "Карточки в покое."
+      },
+      {
+        "name": "popover",
+        "value": "0 8px 30px -4px rgb(0 0 0 / 0.12)",
+        "purpose": "Hover кликабельной карточки, модалки, меню."
+      }
+    ],
+    "motion": [
+      {
+        "name": "fade-in",
+        "value": "160ms ease-out",
+        "purpose": "Появление оверлеев."
+      },
+      {
+        "name": "slide-up",
+        "value": "200ms ease-out, translateY(8px)",
+        "purpose": "Тосты и модалки."
+      },
+      {
+        "name": "rise",
+        "value": "520ms cubic-bezier(0.16, 1, 0.3, 1), translateY(14px)",
+        "purpose": "Вход hero на лендинге."
+      },
+      {
+        "name": "color-transition",
+        "value": "150ms",
+        "purpose": "Hover и active кнопок."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "max 359px"
+      },
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Главное действие экрана: подать заявку, создать проект, зарегистрироваться.",
+      "html": "<button class=\"ds-btn-primary\">Подать заявку</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: none; border-radius: 14px; background: #4F46E5; color: #fff; font: 500 14px/1 'Inter Variable', Inter, system-ui, sans-serif; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 2px 8px -2px rgb(0 0 0 / 0.06); cursor: pointer; transition: background-color 150ms; } .ds-btn-primary:hover { background: #4338CA; } .ds-btn-primary:active { background: #3730A3; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #FAFAFA, 0 0 0 4px #6366F1; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Второстепенное действие рядом с главным.",
+      "html": "<button class=\"ds-btn-secondary\">Отмена</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: 1px solid #E4E4E7; border-radius: 14px; background: #fff; color: #27272A; font: 500 14px/1 'Inter Variable', Inter, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-btn-secondary:hover { background: #F4F4F5; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #FAFAFA, 0 0 0 4px #6366F1; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Тихое действие: «Войти» в шапке, действия в списках.",
+      "html": "<button class=\"ds-btn-ghost\">Войти</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: none; border-radius: 14px; background: transparent; color: #3F3F46; font: 500 14px/1 'Inter Variable', Inter, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-btn-ghost:hover { background: #F4F4F5; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #FAFAFA, 0 0 0 4px #6366F1; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Поле с лейблом сверху и подсказкой или ошибкой снизу.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Название проекта</span><input class=\"ds-input\" placeholder=\"Например, бот для расписания\" /><span class=\"ds-field-hint\">До 80 символов</span></label>",
+      "css": ".ds-field { display: block; max-width: 360px; font-family: 'Inter Variable', Inter, system-ui, sans-serif; } .ds-field-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #3F3F46; } .ds-input { width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #6F6F77; border-radius: 14px; background: #fff; color: #18181B; font-size: 14px; transition: border-color 150ms; } .ds-input::placeholder { color: #6F6F77; } .ds-input:focus-visible { outline: none; border-color: #6366F1; box-shadow: 0 0 0 2px #FAFAFA, 0 0 0 4px #6366F1; } .ds-field-hint { display: block; margin-top: 4px; font-size: 12px; color: #606069; }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge-accent",
+      "description": "Тип проекта и статусы, пилюля на светлой подложке тона.",
+      "html": "<span class=\"ds-badge ds-badge-accent\">Событие</span> <span class=\"ds-badge ds-badge-gray\">Постоянный</span> <span class=\"ds-badge ds-badge-green\">Набор открыт</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font: 500 12px/1.33 'Inter Variable', Inter, system-ui, sans-serif; } .ds-badge-accent { background: #EEF2FF; color: #4338CA; } .ds-badge-gray { background: #F4F4F5; color: #525259; } .ds-badge-green { background: #ECFDF5; color: #047857; }"
+    },
+    {
+      "name": "Project Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Кликабельная карточка проекта в ленте, поднимается на hover.",
+      "html": "<a class=\"ds-card\" href=\"#\"><div class=\"ds-card-head\"><h3 class=\"ds-card-title\">Бот для школьного расписания</h3><span class=\"ds-card-badge\">Событие</span></div><p class=\"ds-card-meta\">Нужны: Frontend, Дизайнер · 2 места</p><p class=\"ds-card-deadline\">Набор до 12 ноября</p></a>",
+      "css": ".ds-card { display: block; max-width: 340px; padding: 20px; border: 1px solid #E4E4E7; border-radius: 20px; background: #fff; color: inherit; text-decoration: none; font-family: 'Inter Variable', Inter, system-ui, sans-serif; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 4px 16px -4px rgb(0 0 0 / 0.08); transition: box-shadow 150ms; } .ds-card:hover { box-shadow: 0 8px 30px -4px rgb(0 0 0 / 0.12); } .ds-card:focus-visible { outline: none; box-shadow: 0 0 0 2px #FAFAFA, 0 0 0 4px #6366F1; } .ds-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; } .ds-card-title { margin: 0; font-size: 16px; font-weight: 600; color: #18181B; } .ds-card-badge { flex-shrink: 0; padding: 4px 10px; border-radius: 9999px; background: #EEF2FF; color: #4338CA; font-size: 12px; font-weight: 500; } .ds-card-meta { margin: 12px 0 0; font-size: 14px; color: #3F3F46; } .ds-card-deadline { margin: 8px 0 0; font-size: 12px; color: #606069; }"
+    },
+    {
+      "name": "Mobile Tab Bar",
+      "kind": "nav",
+      "refersTo": "nav-tab-active",
+      "description": "Нижняя навигация на мобильном, активная вкладка индиго.",
+      "html": "<nav class=\"ds-tabbar\"><a class=\"ds-tab ds-tab-active\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z\"/></svg>Проекты</a><a class=\"ds-tab\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg>События</a><a class=\"ds-tab\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/></svg>Тиммейты</a></nav>",
+      "css": ".ds-tabbar { display: flex; max-width: 375px; border-top: 1px solid #E4E4E7; background: rgb(255 255 255 / 0.95); font-family: 'Inter Variable', Inter, system-ui, sans-serif; } .ds-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0; font-size: 11px; font-weight: 500; color: #606069; text-decoration: none; } .ds-tab:hover { color: #3F3F46; } .ds-tab:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #6366F1; } .ds-tab-active { color: #4F46E5; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Starting Line",
+    "overview": "Ощущение минуты перед стартом хакатона: всё готово, осталось собрать команду и нажать «поехали». Само приложение спокойное и собранное. Нейтральный цинковый фон, белые карточки, один индиго-акцент на действие. Энергия сосредоточена в нескольких местах: крупные заголовки Geologica на лендинге, цифры шагов, XP и бейджи.\n\nПлотность средняя, рассчитанная на телефон. Основной текст 14px, отступы шагом 4px, касания не меньше 44px. Интерфейс дружелюбный и мягкий: крупные скругления (14-20px), лёгкие тени, которые подсказывают, что карточку можно нажать. Тёмная тема равноправна со светлой, вся нейтральная шкала переключается через CSS-переменные.\n\nТри языка (RU/KZ/EN) задают жёсткие ограничения: шрифт заголовков обязан покрывать казахские буквы (ә ғ қ ң ө ұ ү һ і), а вёрстка должна выдерживать более длинные русские и казахские строки на экранах от 320px.",
+    "keyCharacteristics": [
+      "Один индиго-акцент на нейтральном цинковом фоне",
+      "Geologica только для крупных заголовков, весь интерфейс на Inter",
+      "Мягкие формы: кнопки и поля 14px, карточки 20px, бейджи-пилюли",
+      "Лёгкий подъём: карточки слегка приподняты, при наведении поднимаются выше",
+      "Мобильная навигация снизу, на десктопе верхняя панель",
+      "Контраст текста не ниже WCAG AA в обеих темах"
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "Индиго означает действие или текущее место. Не используй его для декора, фоновых плашек или обычного текста.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paired Theme Rule",
+        "body": "Любой новый фиксированный цвет (не из шкалы surface) нужно сразу переопределить для `.dark` в `src/index.css` с контрастом текста не ниже 4.5:1.",
+        "section": "colors"
+      },
+      {
+        "name": "The Landing-Only Display Rule",
+        "body": "Geologica только для крупных заголовков лендинга и маркетинговых блоков. Экраны приложения целиком на Inter.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift-On-Intent Rule",
+        "body": "Тень растёт только в ответ на намерение пользователя (hover, открытие поверх). Не делай статичные блоки выше уровня card.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do бери цвета только из токенов `accent-*` и `surface-*` в Tailwind. Нейтральная шкала живёт в CSS-переменных и сама переключается в тёмной теме.",
+      "Do держи зону касания не меньше 44px, даже когда кнопка визуально 32px.",
+      "Do проверяй каждый экран на 320-359px с самой длинной из трёх локалей.",
+      "Do используй статусные цвета парой: светлая подложка 50 и текст 700.",
+      "Do уважай `prefers-reduced-motion`: анимации (fade-in 160ms, slide-up 200ms, rise 520ms) глобально гасятся."
+    ],
+    "donts": [
+      "Don't используй Geologica на экранах приложения, только на лендинге и в маркетинговых блоках.",
+      "Don't вводи второй акцентный цвет для действий. Индиго единственный.",
+      "Don't задавай фиксированные цвета без пары для `.dark`.",
+      "Don't делай обводку полей светлее field-stroke, она должна давать 3:1 к фону.",
+      "Don't поднимай статичные блоки тенью popover, она только для hover и всплывающих слоёв."
+    ]
+  }
+}

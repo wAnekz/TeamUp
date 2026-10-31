@@ -10,6 +10,7 @@ import { EventFormModal } from '@/components/events/EventFormModal';
 import { formatDeadline, isDeadlinePassed } from '@/utils/dates';
 import { toast } from '@/lib/toast';
 import { useAuthGate } from '@/hooks/useAuthGate';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useT } from '@/i18n';
 import { useLang } from '@/lib/lang';
 import { eventDescription } from '@/utils/events';
@@ -36,6 +37,7 @@ export default function EventDetail() {
   const toggleSub = useToggleEventSubscription();
   const [editing, setEditing] = useState(false);
   const tAll = useT();
+  usePageTitle(event?.title ?? (isLoading ? undefined : tAll.errors.notFound));
   const t = tAll.events;
   const lang = useLang();
 

@@ -130,7 +130,7 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
                 >
                   {!mine && <p className="mb-0.5 text-xs font-medium text-surface-500">{m.authorName}</p>}
                   <p className="whitespace-pre-wrap break-words">{m.text}</p>
-                  <p className={cn('mt-1 text-right text-[10px]', mine ? 'text-accent-100' : 'text-surface-400')}>
+                  <p className={cn('mt-1 text-right text-[11px]', mine ? 'text-accent-100' : 'text-surface-400')}>
                     {messageTime(m.createdAt)}
                   </p>
                 </div>
@@ -140,7 +140,11 @@ export function TeamChat({ projectId, enabled }: { projectId: string; enabled: b
                     onClick={() => toggleBlock(m.authorId, m.authorName)}
                     aria-label={isBlocked ? t.unblock(m.authorName) : t.block(m.authorName)}
                     title={isBlocked ? t.unblock(m.authorName) : t.block(m.authorName)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-surface-300 opacity-0 transition hover:bg-surface-100 hover:text-surface-600 group-hover:opacity-100"
+                    // Blocking is a safety control, so it must be reachable on
+                    // touch: hidden-until-hover only where a mouse can hover,
+                    // and always shown on keyboard focus. ::after widens the
+                    // 28px circle to a 44px tap area.
+                    className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-surface-400 transition after:absolute after:-inset-2 after:content-[''] hover:bg-surface-100 hover:text-surface-700 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
                   >
                     {isBlocked ? <UserCheck size={14} /> : <UserX size={14} />}
                   </button>

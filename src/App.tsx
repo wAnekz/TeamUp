@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { AllowGuest, RequireAuth, RequireGuest } from '@/components/layout/guards';
 import { useAuth } from '@/contexts/useAuth';
+import { RouteTitle } from '@/components/layout/RouteTitle';
 import NotFound from '@/pages/NotFound';
 
 // Everything below is only needed once a specific route is visited, so it's
@@ -77,59 +78,62 @@ function HomeOrFeed() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          <RequireGuest>
+    <>
+      <RouteTitle />
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <RequireGuest>
+              <Page>
+                <Login />
+              </Page>
+            </RequireGuest>
+          }
+        />
+        <Route
+          path="/complete-profile"
+          element={
+            <RequireAuth>
+              <Page>
+                <CompleteProfile />
+              </Page>
+            </RequireAuth>
+          }
+        />
+        <Route path="/" element={<Public><HomeOrFeed /></Public>} />
+        <Route path="/feed" element={<Public><Feed /></Public>} />
+        <Route path="/projects/new" element={<Private><CreateProject /></Private>} />
+        <Route path="/projects/:id" element={<Public><ProjectDetail /></Public>} />
+        <Route path="/projects/:id/edit" element={<Private><CreateProject /></Private>} />
+        <Route path="/users/:id" element={<Private><UserProfile /></Private>} />
+        <Route path="/events" element={<Public><Events /></Public>} />
+        <Route path="/events/:id" element={<Public><EventDetail /></Public>} />
+        <Route path="/schools" element={<Public><Schools /></Public>} />
+        <Route path="/invite/:code" element={<Public><InvitePage /></Public>} />
+        <Route path="/looking-for-team" element={<Private><LookingForTeam /></Private>} />
+        <Route path="/dashboard" element={<Private><Dashboard /></Private>} />
+        <Route path="/moderation/reports" element={<Private><ModerationReports /></Private>} />
+        <Route path="/moderation/events" element={<Private><ModerationEventDrafts /></Private>} />
+        <Route path="/moderation/stats" element={<Private><ModerationStats /></Private>} />
+        <Route
+          path="/privacy"
+          element={
             <Page>
-              <Login />
+              <PrivacyPolicy />
             </Page>
-          </RequireGuest>
-        }
-      />
-      <Route
-        path="/complete-profile"
-        element={
-          <RequireAuth>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
             <Page>
-              <CompleteProfile />
+              <Terms />
             </Page>
-          </RequireAuth>
-        }
-      />
-      <Route path="/" element={<Public><HomeOrFeed /></Public>} />
-      <Route path="/feed" element={<Public><Feed /></Public>} />
-      <Route path="/projects/new" element={<Private><CreateProject /></Private>} />
-      <Route path="/projects/:id" element={<Public><ProjectDetail /></Public>} />
-      <Route path="/projects/:id/edit" element={<Private><CreateProject /></Private>} />
-      <Route path="/users/:id" element={<Private><UserProfile /></Private>} />
-      <Route path="/events" element={<Public><Events /></Public>} />
-      <Route path="/events/:id" element={<Public><EventDetail /></Public>} />
-      <Route path="/schools" element={<Public><Schools /></Public>} />
-      <Route path="/invite/:code" element={<Public><InvitePage /></Public>} />
-      <Route path="/looking-for-team" element={<Private><LookingForTeam /></Private>} />
-      <Route path="/dashboard" element={<Private><Dashboard /></Private>} />
-      <Route path="/moderation/reports" element={<Private><ModerationReports /></Private>} />
-      <Route path="/moderation/events" element={<Private><ModerationEventDrafts /></Private>} />
-      <Route path="/moderation/stats" element={<Private><ModerationStats /></Private>} />
-      <Route
-        path="/privacy"
-        element={
-          <Page>
-            <PrivacyPolicy />
-          </Page>
-        }
-      />
-      <Route
-        path="/terms"
-        element={
-          <Page>
-            <Terms />
-          </Page>
-        }
-      />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+          }
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }

@@ -49,6 +49,10 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+    /* Loading feedback, not decoration: a frozen spinner or skeleton reads
+       as "stuck". Kept, but slower. */
+    .animate-spin { animation-duration: 1.5s !important; animation-iteration-count: infinite !important; }
+    .animate-pulse { animation-duration: 3s !important; animation-iteration-count: infinite !important; }
   }
 }
 

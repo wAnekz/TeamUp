@@ -35,6 +35,14 @@ export const en = {
     somethingWrong: 'Something went wrong. Please try again.',
     notSignedIn: 'Not signed in',
   },
+  pageTitle: {
+    home: 'TeamUp - find a team for hackathons and olympiads',
+    login: 'Log in',
+    completeProfile: 'Complete your profile',
+    invite: 'Team invite',
+    user: 'Profile',
+    terms: 'Terms of use',
+  },
   nav: {
     projects: 'Projects',
     events: 'Events',
@@ -132,6 +140,7 @@ export const en = {
     noSaved: "You haven't saved any projects yet. Tap the star on a project to save it here.",
     searchProjects: 'Search projects...',
     openSlotsOnly: 'Open slots only',
+    filters: 'Filters',
     skills: 'Skills',
     interests: 'Interests',
   },

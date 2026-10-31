@@ -29,6 +29,14 @@ export const ru: Dict = {
     somethingWrong: 'Что-то пошло не так. Попробуй ещё раз.',
     notSignedIn: 'Нужно войти в аккаунт',
   },
+  pageTitle: {
+    home: 'TeamUp - найди команду для хакатонов и олимпиад',
+    login: 'Вход',
+    completeProfile: 'Заполни профиль',
+    invite: 'Приглашение в команду',
+    user: 'Профиль',
+    terms: 'Пользовательское соглашение',
+  },
   nav: {
     projects: 'Проекты',
     events: 'События',
@@ -126,6 +134,7 @@ export const ru: Dict = {
     noSaved: 'В избранном пока пусто. Нажми на звёздочку у проекта, чтобы сохранить его сюда.',
     searchProjects: 'Поиск проектов...',
     openSlotsOnly: 'Только со свободными местами',
+    filters: 'Фильтры',
     skills: 'Навыки',
     interests: 'Интересы',
   },
